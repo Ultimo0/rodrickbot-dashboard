@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RodrickBOT — Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #171a21;
+    --border: #262a35;
+    --text: #e6e8ec;
+    --muted: #8a90a2;
+    --green: #22c55e;
+    --red: #ef4444;
+    --accent: #6ea8fe;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px 16px 64px;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+
+  #keyBar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  #keyBar input {
+    flex: 1;
+    min-width: 200px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+  #keyBar button {
+    background: var(--accent);
+    color: #0f1115;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  #summary {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    min-width: 120px;
+  }
+  .stat .value { font-size: 1.4rem; font-weight: 700; }
+  .stat .label { color: var(--muted); font-size: 0.8rem; }
+
+  .grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+  .instance-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .instance-card .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  .owner { font-weight: 700; font-size: 1.05rem; }
+  .instance-id { color: var(--muted); font-size: 0.75rem; word-break: break-all; }
+  .badge {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge.online { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge.offline { background: rgba(239,68,68,0.15); color: var(--red); }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    padding: 4px 0;
+    border-top: 1px solid var(--border);
+  }
+  .info-row .k { color: var(--muted); }
+
+  #empty, #error {
+    color: var(--muted);
+    padding: 40px 0;
+    text-align: center;
+  }
+  #error { color: var(--red); display: none; }
+</style>
+</head>
+<body>
+  <h1>🤖 RodrickBOT — Dashboard</h1>
+  <div class="subtitle">Suivi centralisé des copies distribuées du bot.</div>
+
+  <div id="keyBar">
+    <input id="apiKeyInput" type="password" placeholder="Clé API du dashboard" />
+    <button id="saveKeyBtn">Connexion</button>
+  </div>
+
+  <div id="error"></div>
+
+  <div id="summary"></div>
+  <div class="grid" id="grid"></div>
+  <div id="empty" style="display:none">Aucune instance n'a encore envoyé de rapport.</div>
+
+  <script>
+    const STORAGE_KEY = 'rodrickbot_dashboard_api_key';
+    const input = document.getElementById('apiKeyInput');
+    const grid = document.getElementById('grid');
+    const summary = document.getElementById('summary');
+    const emptyEl = document.getElementById('empty');
+    const errorEl = document.getElementById('error');
+
+    input.value = localStorage.getItem(STORAGE_KEY) || '';
+
+    document.getElementById('saveKeyBtn').addEventListener('click', () => {
+      localStorage.setItem(STORAGE_KEY, input.value.trim());
+      refresh();
+    });
+
+    function formatUptime(seconds) {
+      if (seconds == null) return '—';
+      const d = Math.floor(seconds / 86400);
+      const h = Math.floor((seconds % 86400) / 3600);
+      const m = Math.floor((seconds % 3600) / 60);
+      const parts = [];
+      if (d) parts.push(d + 'j');
+      if (h) parts.push(h + 'h');
+      parts.push(m + 'min');
+      return parts.join(' ');
+    }
+
+    function timeAgo(ts) {
+      const diff = Math.floor((Date.now() - ts) / 1000);
+      if (diff < 60) return `il y a ${diff}s`;
+      if (diff < 3600) return `il y a ${Math.floor(diff / 60)}min`;
+      if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`;
+      return `il y a ${Math.floor(diff / 86400)}j`;
+    }
+
+    async function refresh() {
+      const key = localStorage.getItem(STORAGE_KEY) || '';
+      errorEl.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/instances', { headers: { 'x-api-key': key } });
+        if (!res.ok) {
+          errorEl.textContent = res.status === 401
+            ? 'Clé API invalide — vérifie ta clé ci-dessus.'
+            : `Erreur serveur (${res.status})`;
+          errorEl.style.display = 'block';
+          grid.innerHTML = '';
+          summary.innerHTML = '';
+          return;
+        }
+
+        const { instances } = await res.json();
+
+        const onlineCount = instances.filter((i) => i.online).length;
+        summary.innerHTML = `
+          <div class="stat"><div class="value">${instances.length}</div><div class="label">Copies totales</div></div>
+          <div class="stat"><div class="value">${onlineCount}</div><div class="label">En ligne</div></div>
+          <div class="stat"><div class="value">${instances.length - onlineCount}</div><div class="label">Hors ligne</div></div>
+        `;
+
+        emptyEl.style.display = instances.length ? 'none' : 'block';
+
+        grid.innerHTML = instances.map((inst) => `
+          <div class="instance-card">
+            <div class="top">
+              <div>
+                <div class="owner">${escapeHtml(inst.ownerName)}</div>
+                <div class="instance-id">${escapeHtml(inst.instanceId)}</div>
+              </div>
+              <div class="badge ${inst.online ? 'online' : 'offline'}">${inst.online ? '🟢 En ligne' : '🔴 Hors ligne'}</div>
+            </div>
+            <div class="info-row"><span class="k">Bot</span><span>${escapeHtml(inst.botName)} v${escapeHtml(inst.version)}</span></div>
+            <div class="info-row"><span class="k">Mode</span><span>${escapeHtml(inst.mode)}</span></div>
+            <div class="info-row"><span class="k">Préfixe</span><span>${escapeHtml(inst.prefix)}</span></div>
+            <div class="info-row"><span class="k">Uptime</span><span>${formatUptime(inst.uptimeSeconds)}</span></div>
+            <div class="info-row"><span class="k">Messages traités</span><span>${inst.messageCount ?? '—'}</span></div>
+            <div class="info-row"><span class="k">Dernier contact</span><span>${timeAgo(inst.lastSeen)}</span></div>
+          </div>
+        `).join('');
+      } catch (err) {
+        errorEl.textContent = 'Impossible de contacter le serveur.';
+        errorEl.style.display = 'block';
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      }[c]));
+    }
+
+    refresh();
+    setInterval(refresh, 10000);
+  </script>
+</body>
+</html>
