@@ -51,14 +51,29 @@ function requireApiKey(req, res, next) {
 
 /** Appelé périodiquement par chaque copie du bot. */
 app.post('/api/heartbeat', requireApiKey, (req, res) => {
-  const { instanceId, ownerName, botName, version, uptimeSeconds, messageCount, mode, prefix, nodeVersion } =
-    req.body || {};
+  const {
+    instanceId,
+    ownerName,
+    botName,
+    version,
+    uptimeSeconds,
+    messageCount,
+    commandStats,
+    mode,
+    prefix,
+    nodeVersion,
+  } = req.body || {};
 
   if (!instanceId) {
     return res.status(400).json({ error: 'instanceId manquant.' });
   }
 
   const instances = loadInstances();
+  // On garde le statut "enabled" existant s'il y en a un (piloté depuis le
+  // dashboard via /api/instances/:id/toggle) — sinon une nouvelle instance
+  // démarre activée par défaut.
+  const previousEnabled = instances[instanceId]?.enabled ?? true;
+
   instances[instanceId] = {
     instanceId,
     ownerName: ownerName || 'Inconnu',
@@ -66,14 +81,36 @@ app.post('/api/heartbeat', requireApiKey, (req, res) => {
     version: version || '?',
     uptimeSeconds: uptimeSeconds ?? null,
     messageCount: messageCount ?? null,
+    commandStats: commandStats || {},
     mode: mode || '?',
     prefix: prefix || '!',
     nodeVersion: nodeVersion || '?',
+    enabled: previousEnabled,
     lastSeen: Date.now(),
   };
   saveInstances(instances);
 
-  res.json({ ok: true });
+  res.json({ ok: true, enabled: previousEnabled });
+});
+
+/** Active/désactive une instance à distance (interrupteur du dashboard). */
+app.post('/api/instances/:instanceId/toggle', requireApiKey, (req, res) => {
+  const { instanceId } = req.params;
+  const { enabled } = req.body || {};
+
+  if (typeof enabled !== 'boolean') {
+    return res.status(400).json({ error: '"enabled" doit être un booléen.' });
+  }
+
+  const instances = loadInstances();
+  if (!instances[instanceId]) {
+    return res.status(404).json({ error: 'Instance inconnue.' });
+  }
+
+  instances[instanceId].enabled = enabled;
+  saveInstances(instances);
+
+  res.json({ ok: true, instanceId, enabled });
 });
 
 /** Utilisé par le tableau de bord (public/index.html) pour afficher les instances. */

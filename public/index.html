@@ -112,6 +112,35 @@
     text-align: center;
   }
   #error { color: var(--red); display: none; }
+
+  .instance-card.disabled-card { opacity: 0.6; }
+
+  .top-commands {
+    border-top: 1px solid var(--border);
+    margin-top: 6px;
+    padding-top: 8px;
+  }
+  .top-commands .k { color: var(--muted); font-size: 0.8rem; margin-bottom: 4px; }
+  .cmd-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    padding: 2px 0;
+  }
+  .muted-small { color: var(--muted); font-size: 0.78rem; }
+
+  .toggle-btn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .toggle-btn.is-on { background: rgba(34,197,94,0.12); color: var(--green); }
+  .toggle-btn.is-off { background: rgba(239,68,68,0.12); color: var(--red); }
 </style>
 </head>
 <body>
@@ -192,7 +221,7 @@
         emptyEl.style.display = instances.length ? 'none' : 'block';
 
         grid.innerHTML = instances.map((inst) => `
-          <div class="instance-card">
+          <div class="instance-card ${inst.enabled === false ? 'disabled-card' : ''}">
             <div class="top">
               <div>
                 <div class="owner">${escapeHtml(inst.ownerName)}</div>
@@ -206,11 +235,48 @@
             <div class="info-row"><span class="k">Uptime</span><span>${formatUptime(inst.uptimeSeconds)}</span></div>
             <div class="info-row"><span class="k">Messages traités</span><span>${inst.messageCount ?? '—'}</span></div>
             <div class="info-row"><span class="k">Dernier contact</span><span>${timeAgo(inst.lastSeen)}</span></div>
+            ${topCommandsHtml(inst.commandStats)}
+            <button class="toggle-btn ${inst.enabled === false ? 'is-off' : 'is-on'}" data-id="${escapeHtml(inst.instanceId)}" data-enabled="${inst.enabled !== false}">
+              ${inst.enabled === false ? '🔴 Désactivée — cliquer pour réactiver' : '🟢 Activée — cliquer pour désactiver'}
+            </button>
           </div>
         `).join('');
+
+        document.querySelectorAll('.toggle-btn').forEach((btn) => {
+          btn.addEventListener('click', () => toggleInstance(btn.dataset.id, btn.dataset.enabled !== 'true'));
+        });
       } catch (err) {
         errorEl.textContent = 'Impossible de contacter le serveur.';
         errorEl.style.display = 'block';
+      }
+    }
+
+    function topCommandsHtml(commandStats) {
+      const entries = Object.entries(commandStats || {}).sort((a, b) => b[1] - a[1]).slice(0, 5);
+      if (!entries.length) {
+        return '<div class="top-commands"><div class="k">Top commandes</div><div class="muted-small">Aucune donnée pour le moment</div></div>';
+      }
+      const rows = entries
+        .map(([name, count]) => `<div class="cmd-row"><span>!${escapeHtml(name)}</span><span>${count}</span></div>`)
+        .join('');
+      return `<div class="top-commands"><div class="k">Top commandes</div>${rows}</div>`;
+    }
+
+    async function toggleInstance(instanceId, enabled) {
+      const key = localStorage.getItem(STORAGE_KEY) || '';
+      try {
+        const res = await fetch(`/api/instances/${encodeURIComponent(instanceId)}/toggle`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+          body: JSON.stringify({ enabled }),
+        });
+        if (!res.ok) {
+          alert('Impossible de changer le statut (clé API invalide ou erreur serveur).');
+          return;
+        }
+        refresh();
+      } catch {
+        alert('Impossible de contacter le serveur.');
       }
     }
 
