@@ -10,15 +10,11 @@ const DATA_FILE = path.join(DATA_DIR, 'instances.json');
 const API_KEY = process.env.DASHBOARD_API_KEY || '';
 const PORT = process.env.PORT || 3000;
 
-// Une instance est considérée "hors ligne" si elle n'a pas envoyé de
-// heartbeat depuis plus de 2x l'intervalle attendu côté bot (5min par
-// défaut) — donc 10 minutes ici.
 const OFFLINE_AFTER_MS = 10 * 60 * 1000;
 
 if (!API_KEY) {
   console.warn(
-    '⚠️  DASHBOARD_API_KEY n\'est pas défini dans .env — le serveur démarre mais rejettera toutes les requêtes. ' +
-      'Définis une clé secrète avant de le déployer.'
+    '⚠️  DASHBOARD_API_KEY n\'est pas défini dans .env — le serveur démarre mais rejettera toutes les requêtes.'
   );
 }
 
@@ -49,19 +45,10 @@ function requireApiKey(req, res, next) {
   next();
 }
 
-/** Appelé périodiquement par chaque copie du bot. */
 app.post('/api/heartbeat', requireApiKey, (req, res) => {
   const {
-    instanceId,
-    ownerName,
-    botName,
-    version,
-    uptimeSeconds,
-    messageCount,
-    commandStats,
-    mode,
-    prefix,
-    nodeVersion,
+    instanceId, ownerName, botName, version, uptimeSeconds,
+    messageCount, commandStats, mode, prefix, nodeVersion,
   } = req.body || {};
 
   if (!instanceId) {
@@ -69,9 +56,6 @@ app.post('/api/heartbeat', requireApiKey, (req, res) => {
   }
 
   const instances = loadInstances();
-  // On garde le statut "enabled" existant s'il y en a un (piloté depuis le
-  // dashboard via /api/instances/:id/toggle) — sinon une nouvelle instance
-  // démarre activée par défaut.
   const previousEnabled = instances[instanceId]?.enabled ?? true;
 
   instances[instanceId] = {
@@ -93,7 +77,6 @@ app.post('/api/heartbeat', requireApiKey, (req, res) => {
   res.json({ ok: true, enabled: previousEnabled });
 });
 
-/** Active/désactive une instance à distance (interrupteur du dashboard). */
 app.post('/api/instances/:instanceId/toggle', requireApiKey, (req, res) => {
   const { instanceId } = req.params;
   const { enabled } = req.body || {};
@@ -113,16 +96,30 @@ app.post('/api/instances/:instanceId/toggle', requireApiKey, (req, res) => {
   res.json({ ok: true, instanceId, enabled });
 });
 
-/** Utilisé par le tableau de bord (public/index.html) pour afficher les instances. */
+/**
+ * Supprime définitivement les infos d'une instance (utile quand une copie
+ * est hors ligne de façon permanente et qu'on veut nettoyer le dashboard).
+ */
+app.delete('/api/instances/:instanceId', requireApiKey, (req, res) => {
+  const { instanceId } = req.params;
+
+  const instances = loadInstances();
+  if (!instances[instanceId]) {
+    return res.status(404).json({ error: 'Instance inconnue.' });
+  }
+
+  delete instances[instanceId];
+  saveInstances(instances);
+
+  res.json({ ok: true, instanceId, deleted: true });
+});
+
 app.get('/api/instances', requireApiKey, (req, res) => {
   const instances = loadInstances();
   const now = Date.now();
 
   const list = Object.values(instances)
-    .map((inst) => ({
-      ...inst,
-      online: now - inst.lastSeen < OFFLINE_AFTER_MS,
-    }))
+    .map((inst) => ({ ...inst, online: now - inst.lastSeen < OFFLINE_AFTER_MS }))
     .sort((a, b) => b.lastSeen - a.lastSeen);
 
   res.json({ instances: list, offlineAfterMs: OFFLINE_AFTER_MS });
