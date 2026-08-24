@@ -7,10 +7,15 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'instances.json');
+const SUMMON_FILE = path.join(DATA_DIR, 'summon.json');
 const API_KEY = process.env.DASHBOARD_API_KEY || '';
 const PORT = process.env.PORT || 3000;
 
 const OFFLINE_AFTER_MS = 10 * 60 * 1000;
+
+// Message par défaut envoyé par toutes les copies quand on appuie sur le
+// bouton "Invocation" du dashboard.
+const DEFAULT_SUMMON_MESSAGE = "Je m'incline devant votre sagesse, Seigneur.";
 
 if (!API_KEY) {
   console.warn(
@@ -31,6 +36,27 @@ function loadInstances() {
 
 function saveInstances(instances) {
   writeFileSync(DATA_FILE, JSON.stringify(instances, null, 2));
+}
+
+/**
+ * "Invocation" globale : un seul enregistrement, remplacé à chaque appui sur
+ * le bouton. Chaque copie du bot poll GET /api/summon très régulièrement
+ * (voir core/summonListener.js côté bot) et compare l'`id` reçu à celui
+ * qu'elle a déjà traité — un nouvel id = une nouvelle invocation à exécuter.
+ * Volontairement un fichier séparé et minuscule (pas mêlé à instances.json)
+ * puisqu'il est lu beaucoup plus souvent que le reste.
+ */
+function loadSummon() {
+  if (!existsSync(SUMMON_FILE)) return null;
+  try {
+    return JSON.parse(readFileSync(SUMMON_FILE, 'utf-8'));
+  } catch {
+    return null;
+  }
+}
+
+function saveSummon(summon) {
+  writeFileSync(SUMMON_FILE, JSON.stringify(summon, null, 2));
 }
 
 const app = express();
@@ -123,6 +149,30 @@ app.get('/api/instances', requireApiKey, (req, res) => {
     .sort((a, b) => b.lastSeen - a.lastSeen);
 
   res.json({ instances: list, offlineAfterMs: OFFLINE_AFTER_MS });
+});
+
+/**
+ * Déclenche une nouvelle invocation : toutes les copies actives vont, dans
+ * les ~10s (voir SUMMON_POLL_INTERVAL_MS côté bot), envoyer le message dans
+ * tous leurs groupes. Écrase toute invocation précédente (un seul appui
+ * suffit, pas d'accumulation).
+ */
+app.post('/api/summon', requireApiKey, (req, res) => {
+  const { message } = req.body || {};
+
+  const summon = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    message: (typeof message === 'string' && message.trim()) || DEFAULT_SUMMON_MESSAGE,
+    createdAt: Date.now(),
+  };
+  saveSummon(summon);
+
+  res.json({ ok: true, summon });
+});
+
+/** Lu très fréquemment par les copies du bot — reste volontairement léger. */
+app.get('/api/summon', requireApiKey, (req, res) => {
+  res.json({ summon: loadSummon() });
 });
 
 app.listen(PORT, () => {

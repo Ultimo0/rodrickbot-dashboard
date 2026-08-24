@@ -143,6 +143,26 @@ h1 .dim {
 #keyBar button:focus-visible, .toggle-btn:focus-visible, .delete-btn:focus-visible,
 #apiKeyInput:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
 
+/* ---------- Summon bar ---------- */
+#summonBar {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 26px; padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(251, 113, 133, 0.1), rgba(251, 113, 133, 0.03));
+  border: 1px solid rgba(251, 113, 133, 0.25); border-radius: var(--radius);
+}
+#summonBtn {
+  background: linear-gradient(135deg, var(--coral), #e11d48);
+  color: #fff; border: none; padding: 13px 22px; border-radius: var(--radius-sm);
+  font-weight: 700; font-size: 0.9rem; cursor: pointer; white-space: nowrap;
+  box-shadow: 0 6px 20px var(--coral-glow);
+  transition: transform 0.12s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+#summonBtn:hover:not(:disabled) { filter: brightness(1.08); box-shadow: 0 8px 26px var(--coral-glow); transform: translateY(-1px); }
+#summonBtn:active:not(:disabled) { transform: translateY(0); }
+#summonBtn:disabled { opacity: 0.7; cursor: default; }
+#summonBtn:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+.summon-hint { color: var(--muted); font-size: 0.82rem; flex: 1; min-width: 200px; }
+
 /* ---------- Summary stats ---------- */
 #summary { display: flex; gap: 14px; margin-bottom: 26px; flex-wrap: wrap; }
 .stat {
@@ -272,6 +292,8 @@ h1 .dim {
   h1 { font-size: 1.3rem; }
   #keyBar { flex-direction: column; }
   #keyBar button { width: 100%; }
+  #summonBar { flex-direction: column; align-items: stretch; }
+  #summonBtn { width: 100%; }
   #summary { gap: 10px; }
   .stat { min-width: 0; flex: 1 1 calc(33.333% - 8px); padding: 12px 14px; }
   .stat .value { font-size: 1.3rem; }
