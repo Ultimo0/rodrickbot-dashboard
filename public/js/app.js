@@ -158,42 +158,5 @@ async function deleteInstance(instanceId) {
   } catch { alert('Impossible de contacter le serveur.'); }
 }
 
-const summonBtn = document.getElementById('summonBtn');
-
-async function summonAll() {
-  const key = apiKey();
-  if (!key) { alert('Renseigne d\'abord ta clé API ci-dessus.'); return; }
-
-  const confirmed = confirm(
-    'Envoyer "Je m\'incline devant votre sagesse, Seigneur." dans tous les groupes de toutes les copies en ligne ?'
-  );
-  if (!confirmed) return;
-
-  summonBtn.disabled = true;
-  const originalLabel = summonBtn.textContent;
-  summonBtn.textContent = '🔥 Invocation en cours…';
-
-  try {
-    const res = await fetch('/api/summon', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key },
-      body: JSON.stringify({}),
-    });
-    if (!res.ok) {
-      alert('Invocation impossible (clé API invalide ou erreur serveur).');
-    } else {
-      summonBtn.textContent = '✅ Invocation envoyée';
-      setTimeout(() => { summonBtn.textContent = originalLabel; }, 3000);
-    }
-  } catch {
-    alert('Impossible de contacter le serveur.');
-  } finally {
-    summonBtn.disabled = false;
-    if (summonBtn.textContent === '🔥 Invocation en cours…') summonBtn.textContent = originalLabel;
-  }
-}
-
-summonBtn.addEventListener('click', summonAll);
-
 refresh();
 setInterval(refresh, 10000);
