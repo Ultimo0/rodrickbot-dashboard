@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('rodrick_hub_theme') || 'classique');</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rodrick Hub — Panel admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <div>
+        <h1>🛠️ Rodrick Hub <span class="dim">— Panel admin</span></h1>
+        <div class="subtitle">Réservé aux comptes administrateurs.</div>
+      </div>
+    </header>
+
+    <nav class="hub-nav">
+      <a href="index.html">Dashboard</a>
+      <a href="releases.html">Versions</a>
+      <a href="commands.html">Commandes</a>
+      <a href="community.html">Communauté</a>
+      <a href="stats.html">Statistiques</a>
+      <select id="themeSwitcher" class="theme-switcher">
+        <option value="classique">Classique</option>
+        <option value="royal">Royal</option>
+        <option value="neon">Neon</option>
+        <option value="mono">Mono</option>
+      </select>
+      <span id="authStatus" class="auth-status"></span>
+    </nav>
+
+    <div id="deniedBanner" class="denied-banner" style="display:none">
+      🚫 Accès réservé aux administrateurs.
+    </div>
+
+    <div id="adminContent" class="admin-cards" style="display:none">
+      <a href="admin-users.html" class="admin-card">
+        <div class="admin-card-icon">👥</div>
+        <div class="admin-card-title">Utilisateurs</div>
+        <div class="admin-card-desc">Voir les comptes, changer les rôles</div>
+      </a>
+      <div class="admin-card is-disabled">
+        <div class="admin-card-icon">📦</div>
+        <div class="admin-card-title">Versions</div>
+        <div class="admin-card-desc">Bientôt — pour l'instant, publication depuis releases.html</div>
+      </div>
+      <a href="admin-posts.html" class="admin-card">
+        <div class="admin-card-icon">📰</div>
+        <div class="admin-card-title">Publications</div>
+        <div class="admin-card-desc">Créer, modifier, supprimer</div>
+      </a>
+      <div class="admin-card is-disabled">
+        <div class="admin-card-icon">🧩</div>
+        <div class="admin-card-title">Commandes</div>
+        <div class="admin-card-desc">Régénérées via le script, voir README</div>
+      </div>
+      <div class="admin-card is-disabled">
+        <div class="admin-card-icon">📊</div>
+        <div class="admin-card-title">Statistiques</div>
+        <div class="admin-card-desc">Bientôt (Phase 7)</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/admin-guard.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/auth-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('rodrick_hub_theme') || 'classique');</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rodrick Hub — Gestion des publications</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="page-header">
+      <div>
+        <h1>📰 Panel admin <span class="dim">— Publications</span></h1>
+        <div class="subtitle"><a href="admin.html" class="back-link">← Retour au panel</a></div>
+      </div>
+    </header>
+
+    <nav class="hub-nav">
+      <a href="index.html">Dashboard</a>
+      <a href="releases.html">Versions</a>
+      <a href="commands.html">Commandes</a>
+      <a href="community.html">Communauté</a>
+      <a href="stats.html">Statistiques</a>
+      <select id="themeSwitcher" class="theme-switcher">
+        <option value="classique">Classique</option>
+        <option value="royal">Royal</option>
+        <option value="neon">Neon</option>
+        <option value="mono">Mono</option>
+      </select>
+      <span id="authStatus" class="auth-status"></span>
+    </nav>
+
+    <div id="deniedBanner" class="denied-banner" style="display:none"></div>
+
+    <div id="adminContent" style="display:none">
+      <details class="publish-panel" id="formPanel">
+        <summary id="formSummary">➕ Nouvelle publication</summary>
+        <form id="postForm">
+          <input type="hidden" id="fId" />
+          <input id="fTitle" type="text" placeholder="Titre" required />
+          <select id="fCategory" required>
+            <option value="publication">Publication</option>
+            <option value="annonce">Annonce</option>
+            <option value="nouveaute">Nouveauté</option>
+            <option value="guide">Guide</option>
+          </select>
+          <textarea id="fContent" placeholder="Contenu (un paragraphe par ligne)" rows="8" required></textarea>
+          <div class="form-buttons">
+            <button type="submit" id="formSubmitBtn">Publier</button>
+            <button type="button" id="formCancelBtn" style="display:none">Annuler la modification</button>
+          </div>
+        </form>
+        <div id="formError" class="form-error"></div>
+      </details>
+
+      <div id="error" class="form-error"></div>
+      <div id="postsList" class="admin-posts-list"></div>
+    </div>
+  </div>
+
+  <script src="js/admin-guard.js"></script>
+  <script src="js/admin-posts.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/auth-nav.js"></script>
+</body>
+</html>

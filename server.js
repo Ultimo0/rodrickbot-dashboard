@@ -1,130 +1,55 @@
 import 'dotenv/config';
+import http from 'http';
 import express from 'express';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import session from 'express-session';
+import { PORT, PUBLIC_DIR, SESSION_SECRET, warnIfMisconfigured } from './src/config.js';
+import { instancesRouter } from './src/routes/instances.js';
+import { releasesRouter } from './src/routes/releases.js';
+import { commandsRouter } from './src/routes/commands.js';
+import { authRouter } from './src/routes/auth.js';
+import { adminRouter } from './src/routes/admin.js';
+import { postsRouter } from './src/routes/posts.js';
+import { statsRouter } from './src/routes/stats.js';
+import { initRealtime } from './src/realtime.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, 'data');
-const DATA_FILE = path.join(DATA_DIR, 'instances.json');
-const API_KEY = process.env.DASHBOARD_API_KEY || '';
-const PORT = process.env.PORT || 3000;
-
-const OFFLINE_AFTER_MS = 10 * 60 * 1000;
-
-if (!API_KEY) {
-  console.warn(
-    '⚠️  DASHBOARD_API_KEY n\'est pas défini dans .env — le serveur démarre mais rejettera toutes les requêtes.'
-  );
-}
-
-if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
-
-function loadInstances() {
-  if (!existsSync(DATA_FILE)) return {};
-  try {
-    return JSON.parse(readFileSync(DATA_FILE, 'utf-8'));
-  } catch {
-    return {};
-  }
-}
-
-function saveInstances(instances) {
-  writeFileSync(DATA_FILE, JSON.stringify(instances, null, 2));
-}
+warnIfMisconfigured();
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
 
-function requireApiKey(req, res, next) {
-  const key = req.header('x-api-key');
-  if (!API_KEY || key !== API_KEY) {
-    return res.status(401).json({ error: 'Clé API manquante ou invalide.' });
-  }
-  next();
-}
+// express-session doit être branché AVANT les routes qui en ont besoin
+// (req.session n'existe que grâce à ce middleware). "resave: false" et
+// "saveUninitialized: false" sont les réglages recommandés par défaut :
+// ils évitent de sauvegarder des sessions vides ou inchangées à chaque
+// requête.
+app.use(session({
+  secret: SESSION_SECRET || 'valeur-par-defaut-non-securisee-a-changer',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 jours avant déconnexion automatique
+  },
+}));
 
-app.post('/api/heartbeat', requireApiKey, (req, res) => {
-  const {
-    instanceId, ownerName, botName, version, uptimeSeconds,
-    messageCount, commandStats, mode, prefix, nodeVersion,
-  } = req.body || {};
+app.use(express.static(PUBLIC_DIR));
 
-  if (!instanceId) {
-    return res.status(400).json({ error: 'instanceId manquant.' });
-  }
+// Toutes les routes de src/routes/instances.js deviennent accessibles sous
+// /api/... (ex: /api/heartbeat, /api/instances).
+app.use('/api', instancesRouter);
+app.use('/api', releasesRouter);
+app.use('/api', commandsRouter);
+app.use('/api', authRouter);
+app.use('/api', adminRouter);
+app.use('/api', postsRouter);
+app.use('/api', statsRouter);
 
-  const instances = loadInstances();
-  const previousEnabled = instances[instanceId]?.enabled ?? true;
+// On crée le serveur HTTP nous-mêmes (au lieu du simple app.listen()
+// habituel) pour pouvoir y attacher le serveur WebSocket EN PLUS
+// d'Express — les deux partagent le même port, distingués automatiquement
+// par le protocole de la requête (http:// classique vs ws://).
+const httpServer = http.createServer(app);
+initRealtime(httpServer);
 
-  instances[instanceId] = {
-    instanceId,
-    ownerName: ownerName || 'Inconnu',
-    botName: botName || 'RodrickBOT',
-    version: version || '?',
-    uptimeSeconds: uptimeSeconds ?? null,
-    messageCount: messageCount ?? null,
-    commandStats: commandStats || {},
-    mode: mode || '?',
-    prefix: prefix || '!',
-    nodeVersion: nodeVersion || '?',
-    enabled: previousEnabled,
-    lastSeen: Date.now(),
-  };
-  saveInstances(instances);
-
-  res.json({ ok: true, enabled: previousEnabled });
-});
-
-app.post('/api/instances/:instanceId/toggle', requireApiKey, (req, res) => {
-  const { instanceId } = req.params;
-  const { enabled } = req.body || {};
-
-  if (typeof enabled !== 'boolean') {
-    return res.status(400).json({ error: '"enabled" doit être un booléen.' });
-  }
-
-  const instances = loadInstances();
-  if (!instances[instanceId]) {
-    return res.status(404).json({ error: 'Instance inconnue.' });
-  }
-
-  instances[instanceId].enabled = enabled;
-  saveInstances(instances);
-
-  res.json({ ok: true, instanceId, enabled });
-});
-
-/**
- * Supprime définitivement les infos d'une instance (utile quand une copie
- * est hors ligne de façon permanente et qu'on veut nettoyer le dashboard).
- */
-app.delete('/api/instances/:instanceId', requireApiKey, (req, res) => {
-  const { instanceId } = req.params;
-
-  const instances = loadInstances();
-  if (!instances[instanceId]) {
-    return res.status(404).json({ error: 'Instance inconnue.' });
-  }
-
-  delete instances[instanceId];
-  saveInstances(instances);
-
-  res.json({ ok: true, instanceId, deleted: true });
-});
-
-app.get('/api/instances', requireApiKey, (req, res) => {
-  const instances = loadInstances();
-  const now = Date.now();
-
-  const list = Object.values(instances)
-    .map((inst) => ({ ...inst, online: now - inst.lastSeen < OFFLINE_AFTER_MS }))
-    .sort((a, b) => b.lastSeen - a.lastSeen);
-
-  res.json({ instances: list, offlineAfterMs: OFFLINE_AFTER_MS });
-});
-
-app.listen(PORT, () => {
-  console.log(`Dashboard RodrickBOT en écoute sur le port ${PORT}`);
+httpServer.listen(PORT, () => {
+  console.log(`Rodrick Hub en écoute sur le port ${PORT} (HTTP + WebSocket)`);
 });

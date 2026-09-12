@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'rodrickbot_dashboard_api_key';
+const STORAGE_KEY = 'rodrick_hub_api_key';
 const input = document.getElementById('apiKeyInput');
 const grid = document.getElementById('grid');
 const summary = document.getElementById('summary');
@@ -95,9 +95,8 @@ async function refresh() {
   try {
     const res = await fetch('/api/instances', { headers: { 'x-api-key': key } });
     if (!res.ok) {
-      errorEl.textContent = res.status === 401
-        ? 'Clé API invalide — vérifie ta clé ci-dessus.'
-        : `Erreur serveur (${res.status})`;
+      const data = await res.json().catch(() => ({}));
+      errorEl.textContent = data.error || `Erreur serveur (${res.status})`;
       errorEl.style.display = 'block';
       grid.innerHTML = '';
       summary.innerHTML = '';
@@ -159,4 +158,13 @@ async function deleteInstance(instanceId) {
 }
 
 refresh();
-setInterval(refresh, 10000);
+
+// Avant le temps réel, on redemandait "y a-t-il du nouveau ?" toutes les
+// 10s, que ça ait changé ou non (setInterval(refresh, 10000)). Maintenant,
+// le serveur PRÉVIENT lui-même dès qu'une instance se met à jour — on
+// n'a plus qu'à réagir à l'événement, sans jamais interroger pour rien.
+window.addEventListener('hub-realtime', (e) => {
+  if (e.detail.type === 'instance-update' || e.detail.type === 'instance-deleted') {
+    refresh();
+  }
+});

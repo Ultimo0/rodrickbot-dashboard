@@ -279,8 +279,779 @@ h1 .dim {
   .instance-card { padding: 18px 16px 18px 20px; }
   .actions { flex-direction: row; }
   .toggle-btn, .delete-btn { padding: 13px; }
+
+  /* --- Phases 1-9 : composants ajoutés après le dashboard d'origine --- */
+
+  /* La nav peut contenir jusqu'à 6 liens + le sélecteur de thème + le
+     statut de connexion — plutôt que de tout écraser sur une largeur de
+     téléphone, on la rend défilante horizontalement (comme des onglets). */
+  .hub-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .hub-nav a { flex-shrink: 0; }
+  .auth-status { margin-left: 0; flex-shrink: 0; }
+  .theme-switcher { flex-shrink: 0; }
+
+  .stats-cards { grid-template-columns: repeat(2, 1fr); }
+  .admin-cards { grid-template-columns: 1fr; }
+
+  /* Le classement de commandes avait une colonne fixe de 100px pour le
+     nom — trop large sur un petit écran, on réduit et on laisse le nom
+     s'il le faut passer sous la barre plutôt que déborder. */
+  .leaderboard-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .leaderboard-count { text-align: left; }
+
+  .user-row, .admin-post-row { flex-direction: column; align-items: stretch; }
+  .admin-post-actions { justify-content: flex-end; }
+
+  .command-top, .release-top { flex-direction: column; align-items: flex-start; }
+
+  .auth-form { padding: 24px 20px; }
+  .auth-form button { align-self: stretch; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .live-pill .dot, .instance-card:has(.badge.online)::before { animation: none; }
+}
+/* =========================================================
+   Phase 1 — Gestion des versions
+   ========================================================= */
+
+.hub-nav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hub-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.hub-nav a:hover { color: var(--text); }
+.hub-nav a.active { color: var(--sky); border-bottom-color: var(--sky); }
+
+.latest-banner {
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  font-size: 0.95rem;
+}
+
+.publish-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+}
+
+.publish-panel summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.publish-panel #keyBar { margin-top: 14px; }
+
+.publish-panel form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.publish-panel input,
+.publish-panel textarea,
+#keyBar input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.publish-panel button {
+  background: var(--violet);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.publish-panel button:hover { filter: brightness(1.15); }
+
+#publishError, #error {
+  color: var(--coral);
+  font-size: 0.85rem;
+  margin: 10px 0;
+  display: none;
+}
+
+.release-list { display: flex; flex-direction: column; gap: 14px; }
+
+.release-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.release-card.is-latest { border-color: var(--teal); }
+
+.release-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.release-version {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.badge-latest {
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--teal);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-left: 8px;
+}
+
+.release-date { color: var(--muted); font-size: 0.82rem; font-family: var(--font-mono); }
+
+.changelog-list { margin: 10px 0; padding-left: 20px; color: var(--muted); font-size: 0.88rem; }
+.changelog-list li { margin-bottom: 4px; }
+
+.release-actions { margin-top: 12px; }
+
+.btn-download {
+  display: inline-block;
+  background: var(--teal);
+  color: #05221d;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+
+.btn-download:hover { filter: brightness(1.1); }
+
+/* =========================================================
+   Phase 2 — Catalogue des commandes
+   ========================================================= */
+
+.search-bar { margin-bottom: 20px; }
+
+.search-bar input {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: var(--text);
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+}
+
+.category-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.pill {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pill:hover { border-color: var(--border-strong); color: var(--text); }
+.pill.active { background: var(--violet); border-color: var(--violet); color: white; }
+
+.commands-list { display: flex; flex-direction: column; gap: 12px; }
+
+.command-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 20px;
+}
+
+.command-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.command-name {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--sky);
+  font-size: 1rem;
+}
+
+.command-tags { display: flex; gap: 6px; }
+
+.category-tag {
+  background: rgba(139, 124, 246, 0.12);
+  color: var(--violet);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.admin-tag {
+  background: rgba(251, 113, 133, 0.12);
+  color: var(--coral);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.command-description { color: var(--text); font-size: 0.9rem; line-height: 1.5; margin-bottom: 8px; }
+
+.command-syntax {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--amber);
+  background: var(--bg);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+/* =========================================================
+   Phase 4 — Comptes utilisateurs
+   ========================================================= */
+
+.page-narrow { max-width: 420px; margin: 0 auto; }
+
+.page-narrow .page-header { justify-content: center; text-align: center; }
+
+.auth-status a {
+  margin-left: auto;
+  color: var(--sky);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.hub-nav { display: flex; align-items: center; }
+.auth-status { margin-left: auto; padding: 10px 16px; }
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 32px 28px;
+  margin-top: 12px;
+}
+
+/* Champs "pilule" : gros rayon d'arrondi, pas de label visible au-dessus
+   (le texte d'exemple dans le champ fait office de repère — placeholder). */
+.auth-form input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 15px 22px;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: var(--violet);
+}
+
+.auth-form input::placeholder { color: var(--muted); }
+
+.auth-form button {
+  align-self: flex-end;
+  background: var(--violet);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 13px 32px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+.auth-form button:hover { filter: brightness(1.15); }
+
+.form-error {
+  display: none;
+  color: var(--coral);
+  font-size: 0.85rem;
+}
+
+.auth-switch { text-align: left; margin-top: 18px; padding-left: 4px; font-size: 0.85rem; color: var(--muted); }
+.auth-switch a { color: var(--sky); font-weight: 600; text-decoration: none; }
+
+.profile-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.profile-row:last-of-type { border-bottom: none; }
+.profile-label { color: var(--muted); font-size: 0.85rem; }
+
+.role-badge {
+  background: rgba(139, 124, 246, 0.12);
+  color: var(--violet);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+#logoutBtn {
+  margin-top: 16px;
+  width: 100%;
+  background: var(--coral);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#logoutBtn:hover { filter: brightness(1.1); }
+
+/* =========================================================
+   Phase 5 — Panel administrateur
+   ========================================================= */
+
+.back-link { color: var(--sky); text-decoration: none; font-size: 0.85rem; }
+
+.admin-nav-link {
+  color: var(--amber) !important;
+  margin-right: 12px;
+}
+
+.denied-banner {
+  background: rgba(251, 113, 133, 0.1);
+  border: 1px solid var(--coral);
+  color: var(--coral);
+  border-radius: 12px;
+  padding: 16px 20px;
+  font-size: 0.9rem;
+}
+
+.admin-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.admin-card {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.admin-card:not(.is-disabled):hover {
+  border-color: var(--violet);
+  transform: translateY(-2px);
+}
+
+.admin-card.is-disabled { opacity: 0.45; cursor: not-allowed; }
+
+.admin-card-icon { font-size: 1.6rem; margin-bottom: 8px; }
+.admin-card-title { font-weight: 700; margin-bottom: 4px; }
+.admin-card-desc { font-size: 0.78rem; color: var(--muted); }
+
+.users-table { display: flex; flex-direction: column; gap: 10px; }
+
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  flex-wrap: wrap;
+}
+
+.user-main { flex: 1; min-width: 160px; }
+.user-name { font-weight: 600; font-size: 0.92rem; }
+.user-email { color: var(--muted); font-size: 0.8rem; }
+
+.you-tag {
+  background: rgba(45, 212, 191, 0.12);
+  color: var(--teal);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-left: 6px;
+}
+
+.role-badge.role-admin {
+  background: rgba(251, 191, 36, 0.12);
+  color: var(--amber);
+}
+
+.role-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.role-toggle-btn:hover:not(:disabled) { border-color: var(--violet); color: var(--violet); }
+.role-toggle-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* =========================================================
+   Phase 6 — Espace communauté
+   ========================================================= */
+
+.posts-list { display: flex; flex-direction: column; gap: 12px; }
+
+.post-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.post-card:hover { border-color: var(--violet); }
+
+.post-title { font-weight: 700; font-size: 1rem; margin: 8px 0 6px; }
+.post-excerpt { color: var(--muted); font-size: 0.88rem; line-height: 1.5; margin-bottom: 8px; }
+.post-meta { color: var(--muted); font-size: 0.76rem; font-family: var(--font-mono); }
+
+.reader {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px 28px;
+}
+
+.reader-close {
+  background: none;
+  border: none;
+  color: var(--sky);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+}
+
+.reader-category {
+  display: inline-block;
+  background: rgba(139, 124, 246, 0.12);
+  color: var(--violet);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-bottom: 10px;
+}
+
+.reader h2 { font-family: var(--font-display); margin-bottom: 6px; }
+.reader-meta { color: var(--muted); font-size: 0.8rem; margin-bottom: 18px; }
+.reader-content { line-height: 1.7; color: var(--text); }
+.reader-content p { margin-bottom: 14px; }
+
+/* Formulaire admin de publication : réutilise .publish-panel (Phase 1),
+   avec un select en plus. */
+.publish-panel select {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.form-buttons { display: flex; gap: 10px; }
+
+.form-buttons button[type="button"] {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--muted);
+}
+
+.admin-posts-list { display: flex; flex-direction: column; gap: 10px; }
+
+.admin-post-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  flex-wrap: wrap;
+}
+
+.admin-post-main { flex: 1; min-width: 200px; }
+.admin-post-actions { display: flex; gap: 8px; }
+
+.edit-btn, .delete-btn {
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--text);
+}
+
+.edit-btn:hover { border-color: var(--sky); color: var(--sky); }
+.delete-btn:hover { border-color: var(--coral); color: var(--coral); }
+
+/* =========================================================
+   Phase 7 — Statistiques
+   ========================================================= */
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  text-align: center;
+}
+
+.stat-value { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--sky); }
+.stat-label { color: var(--muted); font-size: 0.78rem; margin-top: 4px; }
+
+.stats-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+
+.stats-section h3 { font-size: 0.95rem; margin-bottom: 16px; color: var(--text); }
+
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 140px;
+  overflow-x: auto;
+}
+
+.bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 18px;
+  height: 100%;
+  flex: 1;
+}
+
+.bar {
+  width: 100%;
+  min-height: 2px;
+  background: var(--violet);
+  border-radius: 3px 3px 0 0;
+  transition: background 0.15s;
+}
+
+.bar-wrapper:hover .bar { background: var(--sky); }
+
+.bar-label {
+  font-size: 0.6rem;
+  color: var(--muted);
+  margin-top: 6px;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+}
+
+.leaderboard { display: flex; flex-direction: column; gap: 10px; }
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 40px;
+  align-items: center;
+  gap: 12px;
+}
+
+.leaderboard-name { font-family: var(--font-mono); font-size: 0.8rem; color: var(--sky); }
+
+.leaderboard-track {
+  background: var(--bg);
+  border-radius: 6px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.leaderboard-fill {
+  height: 100%;
+  background: var(--violet);
+  border-radius: 6px;
+}
+
+.leaderboard-count { text-align: right; font-size: 0.8rem; color: var(--muted); font-family: var(--font-mono); }
+
+/* =========================================================
+   Phase 8 — Temps réel
+   ========================================================= */
+
+.live-status {
+  font-size: 0.8rem;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+
+.live-status.connected { color: var(--teal); border-color: var(--teal); }
+.live-status.disconnected { color: var(--coral); border-color: var(--coral); }
+
+.notif-banner {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid var(--sky);
+  color: var(--sky);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.notif-banner:hover { filter: brightness(1.1); }
+
+/* =========================================================
+   Phase 9 — Thèmes
+   ------------------------------------------------------------
+   Le thème "Classique" est celui défini dans :root, ci-dessus —
+   les 3 autres redéfinissent juste les mêmes variables avec
+   d'autres valeurs. Aucune règle CSS ailleurs dans ce fichier
+   n'a besoin de changer : tout utilise déjà var(--xxx).
+   ========================================================= */
+
+[data-theme="royal"] {
+  --bg: #120a1f;
+  --card: rgba(35, 20, 50, 0.75);
+  --card-solid: #1e1330;
+  --border: rgba(196, 165, 224, 0.16);
+  --border-strong: rgba(196, 165, 224, 0.3);
+  --text: #f3e8ff;
+  --muted: #b9a0d4;
+  --violet: #c084fc;
+  --violet-deep: #9d5cf0;
+  --sky: #fbbf24;   /* de l'or plutôt que du bleu — l'esprit "royal" */
+  --amber: #fbbf24;
+  --teal: #34d399;  /* reste vert : le sens "positif/en ligne" ne doit pas changer d'un thème à l'autre */
+  --coral: #f87171; /* reste rouge : pareil pour "erreur/danger" */
+}
+
+[data-theme="neon"] {
+  --bg: #05060a;
+  --card: rgba(10, 16, 22, 0.8);
+  --card-solid: #0b1016;
+  --border: rgba(0, 229, 255, 0.18);
+  --border-strong: rgba(0, 229, 255, 0.35);
+  --text: #e0fbff;
+  --muted: #6fa8b8;
+  --violet: #ff2ec4;
+  --violet-deep: #d0179e;
+  --sky: #00e5ff;
+  --amber: #faff00;
+  --teal: #39ff14;
+  --coral: #ff2e4c;
+}
+
+[data-theme="mono"] {
+  --bg: #0a0a0a;
+  --card: rgba(255, 255, 255, 0.04);
+  --card-solid: #151515;
+  --border: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.24);
+  --text: #f0f0f0;
+  --muted: #999999;
+  --violet: #e5e5e5;      /* accent principal = blanc cassé plutôt qu'une couleur */
+  --violet-deep: #c9c9c9;
+  --sky: #cfcfcf;
+  --amber: #d9d9d9;
+  --teal: #8fd9bd;        /* légèrement teinté malgré tout : sans ça, "en ligne" et "hors ligne" deviendraient indiscernables */
+  --coral: #e0a3a3;
+}
+
+.theme-switcher {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  margin-left: 8px;
+  cursor: pointer;
 }
