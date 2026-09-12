@@ -5,21 +5,17 @@
   "type": "module",
   "main": "server.js",
   "engines": {
-    "node": "20.x"
+    "node": ">=20.0.0"
   },
   "scripts": {
-    "start": "node server.js",
-    "migrate": "node scripts/migrate-json-to-sqlite.js"
+    "start": "node server.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.3.0",
+    "pg": "^8.13.0",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-session": "^1.18.0",
     "ws": "^8.18.0"
-  },
-  "allowScripts": {
-    "better-sqlite3": true
   }
 }

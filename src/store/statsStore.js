@@ -1,11 +1,6 @@
-import { db } from '../db.js';
+import { pool } from '../db.js';
 import { loadInstances } from './instancesStore.js';
 import { OFFLINE_AFTER_MS } from '../config.js';
-
-const countUsersStmt = db.prepare('SELECT COUNT(*) as count FROM users');
-const countPostsStmt = db.prepare('SELECT COUNT(*) as count FROM posts');
-const usersCreatedAtStmt = db.prepare('SELECT createdAt FROM users');
-const heartbeatsSinceStmt = db.prepare('SELECT instanceId, timestamp FROM heartbeat_log WHERE timestamp >= ?');
 
 /**
  * Répartit une liste de timestamps en un total par jour, sur les N
@@ -23,7 +18,7 @@ function bucketByDay(timestamps, days) {
   }
 
   for (const ts of timestamps) {
-    const key = new Date(ts).toISOString().slice(0, 10);
+    const key = new Date(Number(ts)).toISOString().slice(0, 10);
     if (buckets.has(key)) buckets.set(key, buckets.get(key) + 1);
   }
 
@@ -31,23 +26,26 @@ function bucketByDay(timestamps, days) {
 }
 
 /** Chiffres globaux, pour les cartes en haut de la page statistiques. */
-export function getOverview() {
-  const instances = Object.values(loadInstances());
+export async function getOverview() {
+  const instances = Object.values(await loadInstances());
   const now = Date.now();
 
+  const { rows: userCountRows } = await pool.query('SELECT COUNT(*)::int AS count FROM users');
+  const { rows: postCountRows } = await pool.query('SELECT COUNT(*)::int AS count FROM posts');
+
   return {
-    totalUsers: countUsersStmt.get().count,
-    totalPosts: countPostsStmt.get().count,
+    totalUsers: userCountRows[0].count,
+    totalPosts: postCountRows[0].count,
     totalInstances: instances.length,
-    onlineInstances: instances.filter((i) => now - i.lastSeen < OFFLINE_AFTER_MS).length,
-    totalMessages: instances.reduce((sum, i) => sum + (i.messageCount || 0), 0),
+    onlineInstances: instances.filter((i) => now - Number(i.lastSeen) < OFFLINE_AFTER_MS).length,
+    totalMessages: instances.reduce((sum, i) => sum + Number(i.messageCount || 0), 0),
   };
 }
 
 /** Nouveaux comptes Hub par jour, sur les N derniers jours. */
-export function getUserGrowth(days = 30) {
-  const timestamps = usersCreatedAtStmt.all().map((r) => r.createdAt);
-  return bucketByDay(timestamps, days);
+export async function getUserGrowth(days = 30) {
+  const { rows } = await pool.query('SELECT "createdAt" FROM users');
+  return bucketByDay(rows.map((r) => r.createdAt), days);
 }
 
 /**
@@ -58,12 +56,15 @@ export function getUserGrowth(days = 30) {
  * chiffres trompeurs. Le nombre d'instances actives est une mesure plus
  * honnête de l'activité réelle du réseau.
  */
-export function getActivityOverTime(days = 30) {
-  const rows = heartbeatsSinceStmt.all(Date.now() - days * 24 * 60 * 60 * 1000);
+export async function getActivityOverTime(days = 30) {
+  const { rows } = await pool.query(
+    'SELECT "instanceId", "timestamp" FROM heartbeat_log WHERE "timestamp" >= $1',
+    [Date.now() - days * 24 * 60 * 60 * 1000]
+  );
 
   const byDay = new Map();
   for (const row of rows) {
-    const key = new Date(row.timestamp).toISOString().slice(0, 10);
+    const key = new Date(Number(row.timestamp)).toISOString().slice(0, 10);
     if (!byDay.has(key)) byDay.set(key, new Set());
     byDay.get(key).add(row.instanceId);
   }
@@ -80,8 +81,8 @@ export function getActivityOverTime(days = 30) {
 }
 
 /** Classement des commandes les plus utilisées, toutes instances confondues. */
-export function getTopCommands(limit = 10) {
-  const instances = Object.values(loadInstances());
+export async function getTopCommands(limit = 10) {
+  const instances = Object.values(await loadInstances());
   const totals = {};
 
   for (const inst of instances) {

@@ -1,17 +1,8 @@
-# Node 20 : version minimale requise par package.json ("engines").
-# "slim" = image Debian allégée (pas Alpine) car better-sqlite3 compile
-# plus facilement contre la glibc de Debian que contre la musl d'Alpine.
+# pg est un client Postgres pur JavaScript (aucun module natif à
+# compiler), donc plus besoin de fixer une version de Node précise ni
+# d'installer d'outils de compilation comme c'était le cas avec
+# better-sqlite3 — n'importe quelle image Node 20+ récente convient.
 FROM node:20-bookworm-slim
-
-# python3/make/g++ : nécessaires UNIQUEMENT si npm ne trouve pas de
-# binaire précompilé pour better-sqlite3 correspondant à la plateforme
-# de build et doit le recompiler depuis les sources. Les avoir présents
-# rend le build fiable quelle que soit la plateforme de la PaaS.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      python3 \
-      make \
-      g++ \
-    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -22,12 +13,6 @@ COPY package.json ./
 RUN npm install --omit=dev
 
 COPY . .
-
-# Le dossier data/ (base SQLite + fichiers persistants) doit survivre aux
-# redéploiements. Sur Railway/Render/Fly.io, monte un volume persistant
-# sur ce chemin exact (voir DEPLOY.md) — sans ça, chaque redéploiement
-# repart d'une base vide.
-RUN mkdir -p /app/data
 
 # Documentaire uniquement : la PaaS choisit le port réel via la variable
 # d'environnement PORT, déjà lue par src/config.js. EXPOSE ne fait rien

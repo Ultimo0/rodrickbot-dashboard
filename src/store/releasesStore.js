@@ -1,19 +1,19 @@
-import { db } from '../db.js';
+import { pool } from '../db.js';
 
-const selectAll = db.prepare('SELECT * FROM releases ORDER BY date DESC');
-const insert = db.prepare('INSERT INTO releases (version, date, changelog, downloadUrl) VALUES (?, ?, ?, ?)');
-
-// Remarque : le tri par date se fait maintenant directement en SQL
-// (ORDER BY date DESC) au lieu d'un .sort() en JavaScript — la base de
-// données s'en charge, pas nous.
-export function loadReleases() {
-  return selectAll.all();
+export async function loadReleases() {
+  const { rows } = await pool.query('SELECT * FROM releases ORDER BY date DESC');
+  return rows;
 }
 
-export function addRelease(release) {
-  insert.run(release.version, release.date, release.changelog || '', release.downloadUrl || null);
+export async function addRelease(release) {
+  await pool.query(
+    `INSERT INTO releases (version, date, changelog, "downloadUrl")
+     VALUES ($1, $2, $3, $4)`,
+    [release.version, release.date, release.changelog || '', release.downloadUrl || null]
+  );
 }
 
-export function getLatestRelease() {
-  return loadReleases()[0] || null;
+export async function getLatestRelease() {
+  const releases = await loadReleases();
+  return releases[0] || null;
 }

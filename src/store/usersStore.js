@@ -1,40 +1,44 @@
-import { db } from '../db.js';
-
-const insert = db.prepare(`
-  INSERT INTO users (email, passwordHash, role, createdAt, name)
-  VALUES (?, ?, ?, ?, ?)
-`);
-const findByEmail = db.prepare('SELECT * FROM users WHERE email = ?');
-const findById = db.prepare('SELECT * FROM users WHERE id = ?');
-const selectAll = db.prepare('SELECT id, email, name, role, createdAt FROM users ORDER BY createdAt DESC');
-const updateRole = db.prepare('UPDATE users SET role = ? WHERE id = ?');
+import { pool } from '../db.js';
 
 /**
  * Le premier compte jamais créé devient automatiquement admin — sans ça,
- * personne ne pourrait jamais accéder au panel administrateur (Phase 5)
- * sans modifier la base de données à la main. Tous les comptes suivants
- * sont 'user' par défaut.
+ * personne ne pourrait jamais accéder au panel administrateur sans
+ * modifier la base de données à la main. Tous les comptes suivants sont
+ * 'user' par défaut.
  */
-export function createUser(email, passwordHash, name) {
-  const isFirstUser = selectAll.all().length === 0;
+export async function createUser(email, passwordHash, name) {
+  const { rows: countRows } = await pool.query('SELECT COUNT(*)::int AS count FROM users');
+  const isFirstUser = countRows[0].count === 0;
   const role = isFirstUser ? 'admin' : 'user';
-  const result = insert.run(email, passwordHash, role, Date.now(), name);
-  return { id: result.lastInsertRowid, email, role, name };
+
+  const { rows } = await pool.query(
+    `INSERT INTO users (email, "passwordHash", role, "createdAt", name)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id`,
+    [email, passwordHash, role, Date.now(), name]
+  );
+
+  return { id: rows[0].id, email, role, name };
 }
 
-export function findUserByEmail(email) {
-  return findByEmail.get(email) || null;
+export async function findUserByEmail(email) {
+  const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+  return rows[0] || null;
 }
 
-export function findUserById(id) {
-  return findById.get(id) || null;
+export async function findUserById(id) {
+  const { rows } = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+  return rows[0] || null;
 }
 
 /** Ne renvoie JAMAIS passwordHash — utilisé pour les listes/profils publics. */
-export function listUsers() {
-  return selectAll.all();
+export async function listUsers() {
+  const { rows } = await pool.query(
+    'SELECT id, email, name, role, "createdAt" FROM users ORDER BY "createdAt" DESC'
+  );
+  return rows;
 }
 
-export function updateUserRole(id, role) {
-  updateRole.run(role, id);
+export async function updateUserRole(id, role) {
+  await pool.query('UPDATE users SET role = $1 WHERE id = $2', [role, id]);
 }

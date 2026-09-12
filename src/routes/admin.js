@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { listUsers, findUserById, updateUserRole } from '../store/usersStore.js';
+import { ah } from '../utils/asyncHandler.js';
 
 export const adminRouter = Router();
 
@@ -11,11 +12,11 @@ export const adminRouter = Router();
 // à router.use() — pas besoin de les répéter sur chaque route une par une.
 adminRouter.use(requireAuth, requireAdmin);
 
-adminRouter.get('/admin/users', (req, res) => {
-  res.json({ users: listUsers() });
-});
+adminRouter.get('/admin/users', ah(async (req, res) => {
+  res.json({ users: await listUsers() });
+}));
 
-adminRouter.patch('/admin/users/:id/role', (req, res) => {
+adminRouter.patch('/admin/users/:id/role', ah(async (req, res) => {
   const targetId = Number(req.params.id);
   const { role } = req.body || {};
 
@@ -31,11 +32,11 @@ adminRouter.patch('/admin/users/:id/role', (req, res) => {
     return res.status(400).json({ error: 'Impossible de modifier ton propre rôle — demande à un autre admin.' });
   }
 
-  const target = findUserById(targetId);
+  const target = await findUserById(targetId);
   if (!target) {
     return res.status(404).json({ error: 'Utilisateur introuvable.' });
   }
 
-  updateUserRole(targetId, role);
+  await updateUserRole(targetId, role);
   res.json({ ok: true, id: targetId, role });
-});
+}));

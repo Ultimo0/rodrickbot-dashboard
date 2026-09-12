@@ -10,21 +10,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // pour que les autres fichiers n'aient jamais à écrire "../.." eux-mêmes.
 export const ROOT_DIR = path.join(__dirname, '..');
 export const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
-export const DATA_DIR = path.join(ROOT_DIR, 'data');
-export const DATA_FILE = path.join(DATA_DIR, 'instances.json');
-export const RELEASES_FILE = path.join(DATA_DIR, 'releases.json');
-export const COMMANDS_FILE = path.join(DATA_DIR, 'commands.json');
-export const DB_FILE = path.join(DATA_DIR, 'hub.db');
 
 export const PORT = process.env.PORT || 3000;
 export const API_KEY = process.env.DASHBOARD_API_KEY || '';
 export const SESSION_SECRET = process.env.SESSION_SECRET || '';
+
+// Chaîne de connexion Postgres (ex: Neon) — remplace l'ancien fichier
+// SQLite local. Format : postgresql://user:password@host/dbname?sslmode=require
+export const DATABASE_URL = process.env.DATABASE_URL || '';
 
 // Une instance est considérée "hors ligne" si elle n'a pas envoyé de
 // heartbeat depuis plus longtemps que ça.
 export const OFFLINE_AFTER_MS = 10 * 60 * 1000;
 
 export function warnIfMisconfigured() {
+  if (!DATABASE_URL) {
+    console.warn(
+      "⚠️  DATABASE_URL n'est pas défini dans .env — le serveur démarre mais toute requête à la base de données échouera."
+    );
+  }
   if (!API_KEY) {
     console.warn(
       "⚠️  DASHBOARD_API_KEY n'est pas défini dans .env — le serveur démarre mais rejettera toutes les requêtes."

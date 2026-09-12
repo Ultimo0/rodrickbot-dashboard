@@ -18,7 +18,7 @@
 import { readFileSync, readdirSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { db } from '../src/db.js';
+import { pool } from '../src/db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -87,17 +87,30 @@ const commands = files
 
 // Remplace TOUT le contenu de la table à chaque génération — le catalogue
 // reflète toujours exactement l'état actuel des fichiers de commandes,
-// jamais un mélange d'ancien et de nouveau.
-const replaceAll = db.transaction((cmds) => {
-  db.prepare('DELETE FROM commands').run();
-  const insert = db.prepare(`
-    INSERT INTO commands (name, aliases, description, category, adminOnly, syntax)
-    VALUES (@name, @aliases, @description, @category, @adminOnly, @syntax)
-  `);
-  for (const cmd of cmds) {
-    insert.run({ ...cmd, aliases: JSON.stringify(cmd.aliases), adminOnly: cmd.adminOnly ? 1 : 0 });
+// jamais un mélange d'ancien et de nouveau. Un client dédié (plutôt que
+// pool.query directement) garantit que BEGIN/DELETE/INSERT/COMMIT
+// s'exécutent tous sur la MÊME connexion.
+async function replaceAll(cmds) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM commands');
+    for (const cmd of cmds) {
+      await client.query(
+        `INSERT INTO commands (name, aliases, description, category, "adminOnly", syntax)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [cmd.name, JSON.stringify(cmd.aliases), cmd.description, cmd.category, cmd.adminOnly ? 1 : 0, cmd.syntax]
+      );
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
   }
-});
+}
 
-replaceAll(commands);
+await replaceAll(commands);
 console.log(`✅ ${commands.length} commandes écrites dans la base de données.`);
+await pool.end();

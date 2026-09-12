@@ -1,78 +1,98 @@
-import Database from 'better-sqlite3';
-import { existsSync, mkdirSync } from 'fs';
-import { DATA_DIR, DB_FILE } from './config.js';
+import pg from 'pg';
+import { DATABASE_URL } from './config.js';
 
-if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+const { Pool, types } = pg;
 
-/**
- * Une seule connexion, partagée par tout le projet (import { db } from
- * './db.js' partout où on en a besoin) — contrairement aux fichiers JSON
- * qu'on ouvrait/fermait à chaque lecture, une base de données garde une
- * connexion ouverte pendant toute la vie du serveur.
- */
-export const db = new Database(DB_FILE);
-
-// WAL = "Write-Ahead Logging", un mode qui permet à SQLite de lire et
-// écrire en même temps sans se bloquer l'un l'autre. Recommandé pour
-// à peu près tous les projets Node + SQLite, sans inconvénient réel ici.
-db.pragma('journal_mode = WAL');
+// Par défaut, pg renvoie les colonnes BIGINT sous forme de CHAÎNES DE
+// CARACTÈRES (pas de nombres) — parce qu'un BIGINT peut dépasser la
+// limite de précision sûre des nombres JavaScript (Number.MAX_SAFE_INTEGER,
+// environ 9 x 10^15). Ici, BIGINT ne sert qu'à stocker des timestamps en
+// millisecondes (Date.now()) — bien en dessous de cette limite — donc on
+// force pg à les convertir en vrais nombres. Sans ça, des comparaisons
+// (a.lastSeen - b.lastSeen) fonctionneraient par coïncidence (JS convertit
+// implicitement), mais new Date(row.timestamp) casserait silencieusement
+// (une chaîne comme "1699999999999" n'est pas une date ISO valide).
+// 20 = OID du type BIGINT dans le catalogue interne de Postgres.
+types.setTypeParser(20, (value) => parseInt(value, 10));
 
 /**
- * CREATE TABLE IF NOT EXISTS : ne fait RIEN si la table existe déjà —
- * donc on peut appeler cette fonction à chaque démarrage du serveur sans
- * risque d'effacer des données. C'est ce qui remplace le "if (!existsSync)"
- * qu'on avait dans les anciens stores JSON.
+ * Un seul Pool, partagé par tout le projet (import { pool } from './db.js'
+ * partout où on en a besoin) — le Pool gère lui-même plusieurs connexions
+ * simultanées vers Postgres et les réutilise, contrairement à une seule
+ * connexion ouverte en permanence comme avec better-sqlite3.
+ *
+ * ssl: { rejectUnauthorized: false } est la configuration standard
+ * recommandée par les fournisseurs de Postgres "serverless" comme Neon —
+ * la connexion est bien chiffrée (TLS), on ne vérifie juste pas la chaîne
+ * de certificats contre l'autorité racine locale, ce qui évite des erreurs
+ * de connexion sur certains environnements sans configuration TLS
+ * supplémentaire de leur côté.
  */
-function initSchema() {
-  db.exec(`
+export const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
+
+/**
+ * IMPORTANT — Postgres met en minuscules tout identifiant (nom de colonne)
+ * qui n'est pas entre guillemets doubles. Comme tout le reste du code
+ * utilise des noms de colonnes en camelCase (instanceId, ownerName,
+ * createdAt...) et s'attend à les relire tels quels dans les résultats de
+ * requête, CHAQUE colonne camelCase est déclarée et référencée entre
+ * guillemets doubles ("instanceId") partout dans ce fichier et dans
+ * src/store/*.js. Oublier un guillemet quelque part est la source d'erreur
+ * la plus probable si tu modifies ce schéma plus tard.
+ */
+async function initSchema() {
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS instances (
-      instanceId    TEXT PRIMARY KEY,
-      ownerName     TEXT,
-      botName       TEXT,
-      version       TEXT,
-      uptimeSeconds INTEGER,
-      messageCount  INTEGER,
-      commandStats  TEXT,    -- objet JS stocké en texte JSON (SQLite n'a pas de type "objet")
-      mode          TEXT,
-      prefix        TEXT,
-      nodeVersion   TEXT,
-      enabled       INTEGER NOT NULL DEFAULT 1,  -- SQLite n'a pas de vrai booléen : 0 = false, 1 = true
-      lastSeen      INTEGER
+      "instanceId"    TEXT PRIMARY KEY,
+      "ownerName"     TEXT,
+      "botName"       TEXT,
+      "version"       TEXT,
+      "uptimeSeconds" BIGINT,
+      "messageCount"  BIGINT,
+      "commandStats"  TEXT,    -- objet JS stocké en texte JSON (comme avec SQLite)
+      "mode"          TEXT,
+      "prefix"        TEXT,
+      "nodeVersion"   TEXT,
+      "enabled"       INTEGER NOT NULL DEFAULT 1,  -- 0 = false, 1 = true (comme avec SQLite)
+      "lastSeen"      BIGINT
     );
 
     CREATE TABLE IF NOT EXISTS releases (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      version     TEXT NOT NULL,
-      date        TEXT NOT NULL,
-      changelog   TEXT,
-      downloadUrl TEXT
+      id            SERIAL PRIMARY KEY,
+      version       TEXT NOT NULL,
+      date          TEXT NOT NULL,
+      changelog     TEXT,
+      "downloadUrl" TEXT
     );
 
     CREATE TABLE IF NOT EXISTS commands (
-      name        TEXT PRIMARY KEY,
-      aliases     TEXT,   -- tableau JS stocké en texte JSON
-      description TEXT,
-      category    TEXT,
-      adminOnly   INTEGER NOT NULL DEFAULT 0,
-      syntax      TEXT
+      name          TEXT PRIMARY KEY,
+      aliases       TEXT,   -- tableau JS stocké en texte JSON
+      description   TEXT,
+      category      TEXT,
+      "adminOnly"   INTEGER NOT NULL DEFAULT 0,
+      syntax        TEXT
     );
 
     CREATE TABLE IF NOT EXISTS users (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      email        TEXT NOT NULL UNIQUE,
-      passwordHash TEXT NOT NULL,
-      role         TEXT NOT NULL DEFAULT 'user',  -- 'user' ou 'admin'
-      createdAt    INTEGER NOT NULL
+      id             SERIAL PRIMARY KEY,
+      email          TEXT NOT NULL UNIQUE,
+      "passwordHash" TEXT NOT NULL,
+      role           TEXT NOT NULL DEFAULT 'user',  -- 'user' ou 'admin'
+      "createdAt"    BIGINT NOT NULL,
+      name           TEXT
     );
 
     CREATE TABLE IF NOT EXISTS posts (
-      id        INTEGER PRIMARY KEY AUTOINCREMENT,
-      title     TEXT NOT NULL,
-      content   TEXT NOT NULL,
-      category  TEXT NOT NULL DEFAULT 'publication', -- 'publication' | 'annonce' | 'nouveaute' | 'guide'
-      authorId  INTEGER NOT NULL,
-      createdAt INTEGER NOT NULL,
-      FOREIGN KEY (authorId) REFERENCES users(id)
+      id          SERIAL PRIMARY KEY,
+      title       TEXT NOT NULL,
+      content     TEXT NOT NULL,
+      category    TEXT NOT NULL DEFAULT 'publication', -- 'publication' | 'annonce' | 'nouveaute' | 'guide'
+      "authorId"  INTEGER NOT NULL REFERENCES users(id),
+      "createdAt" BIGINT NOT NULL
     );
 
     -- Contrairement à "instances" (qui ne garde que le DERNIER heartbeat de
@@ -81,35 +101,12 @@ function initSchema() {
     -- une courbe d'activité dans le temps plutôt qu'une simple photo du
     -- moment présent.
     CREATE TABLE IF NOT EXISTS heartbeat_log (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      instanceId   TEXT NOT NULL,
-      messageCount INTEGER,
-      timestamp    INTEGER NOT NULL
+      id             SERIAL PRIMARY KEY,
+      "instanceId"   TEXT NOT NULL,
+      "messageCount" BIGINT,
+      "timestamp"    BIGINT NOT NULL
     );
   `);
 }
 
-initSchema();
-
-/**
- * Migration : ajoute la colonne "name" si elle n'existe pas déjà.
- *
- * Pourquoi pas juste dans initSchema() : CREATE TABLE IF NOT EXISTS ne
- * modifie JAMAIS une table qui existe déjà, même si sa définition a
- * changé — donc ajouter "name" à la définition de la table ci-dessus
- * n'aurait aucun effet sur une base déjà créée. Il faut une vraie requête
- * ALTER TABLE, une seule fois. SQLite lève une erreur si la colonne
- * existe déjà — on l'attrape et on l'ignore, ce qui rend cette fonction
- * sûre à exécuter à chaque démarrage du serveur.
- */
-function migrateAddNameColumn() {
-  try {
-    db.exec('ALTER TABLE users ADD COLUMN name TEXT');
-    console.log('Migration : colonne "name" ajoutée à la table users.');
-  } catch (err) {
-    if (!err.message.includes('duplicate column name')) throw err;
-    // sinon : la colonne existe déjà, rien à faire
-  }
-}
-
-migrateAddNameColumn();
+await initSchema();

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getOverview, getUserGrowth, getActivityOverTime, getTopCommands } from '../store/statsStore.js';
+import { ah } from '../utils/asyncHandler.js';
 
 export const statsRouter = Router();
 
@@ -7,11 +8,12 @@ export const statsRouter = Router();
 // détails individuels d'une instance précise (ça, c'est /api/instances,
 // resté protégé par clé API). Personne ne peut identifier un utilisateur
 // ou un bot précis à partir de ces chiffres.
-statsRouter.get('/stats', (req, res) => {
-  res.json({
-    overview: getOverview(),
-    userGrowth: getUserGrowth(30),
-    activityOverTime: getActivityOverTime(30),
-    topCommands: getTopCommands(10),
-  });
-});
+statsRouter.get('/stats', ah(async (req, res) => {
+  const [overview, userGrowth, activityOverTime, topCommands] = await Promise.all([
+    getOverview(),
+    getUserGrowth(30),
+    getActivityOverTime(30),
+    getTopCommands(10),
+  ]);
+  res.json({ overview, userGrowth, activityOverTime, topCommands });
+}));

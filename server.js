@@ -43,6 +43,17 @@ app.use('/api', adminRouter);
 app.use('/api', postsRouter);
 app.use('/api', statsRouter);
 
+// Middleware d'erreur global — reçoit tout ce que ah() (src/utils/asyncHandler.js)
+// redirige avec next(err), typiquement une requête Postgres qui échoue
+// (connexion perdue, contrainte violée...). DOIT être déclaré après toutes
+// les routes : Express reconnaît un middleware d'erreur au fait qu'il a
+// 4 paramètres (err, req, res, next), peu importe où il est dans le fichier,
+// mais il ne s'applique qu'aux routes déclarées AVANT lui.
+app.use((err, req, res, next) => {
+  console.error('Erreur non gérée sur une route :', err);
+  res.status(500).json({ error: 'Erreur interne du serveur.' });
+});
+
 // On crée le serveur HTTP nous-mêmes (au lieu du simple app.listen()
 // habituel) pour pouvoir y attacher le serveur WebSocket EN PLUS
 // d'Express — les deux partagent le même port, distingués automatiquement
