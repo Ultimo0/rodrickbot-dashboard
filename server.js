@@ -2,7 +2,9 @@ import 'dotenv/config';
 import http from 'http';
 import express from 'express';
 import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
 import { PORT, PUBLIC_DIR, SESSION_SECRET, warnIfMisconfigured } from './src/config.js';
+import { pool } from './src/db.js';
 import { instancesRouter } from './src/routes/instances.js';
 import { releasesRouter } from './src/routes/releases.js';
 import { commandsRouter } from './src/routes/commands.js';
@@ -17,12 +19,21 @@ warnIfMisconfigured();
 const app = express();
 app.use(express.json());
 
+const PgSession = connectPgSimple(session);
+
 // express-session doit être branché AVANT les routes qui en ont besoin
 // (req.session n'existe que grâce à ce middleware). "resave: false" et
 // "saveUninitialized: false" sont les réglages recommandés par défaut :
 // ils évitent de sauvegarder des sessions vides ou inchangées à chaque
 // requête.
+//
+// store: les sessions vivent dans Postgres (table "session", créée
+// automatiquement au démarrage grâce à createTableIfMissing) plutôt qu'en
+// mémoire du process — sans ça (MemoryStore, le défaut d'express-session),
+// tout le monde serait déconnecté à chaque redémarrage du service, et la
+// mémoire grossirait indéfiniment tant que le process tourne.
 app.use(session({
+  store: new PgSession({ pool, createTableIfMissing: true, tableName: 'session' }),
   secret: SESSION_SECRET || 'valeur-par-defaut-non-securisee-a-changer',
   resave: false,
   saveUninitialized: false,
