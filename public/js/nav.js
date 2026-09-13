@@ -17,6 +17,9 @@
  * Chaque page HTML n'a donc plus qu'un conteneur vide à tenir à jour
  * (aucun) — ajouter une page au Hub se fait en modifiant UNE seule fois
  * PAGES ci-dessous, plus jamais 11 fichiers séparés.
+ *
+ * Ce fichier gère aussi le balayage tactile (swipe) gauche/droite pour
+ * changer de page — voir initSwipeNavigation() plus bas.
  */
 
 const PAGES = [
@@ -64,4 +67,66 @@ function renderBottomTabBar() {
 document.addEventListener('DOMContentLoaded', () => {
   renderTopNavLinks();
   renderBottomTabBar();
+  initSwipeNavigation();
 });
+
+/**
+ * Balayer vers la gauche → page suivante, vers la droite → page
+ * précédente, dans l'ordre de PAGES (celui de la barre d'onglets).
+ * Convention identique à un carrousel de photos : swiper à gauche fait
+ * "avancer" (comme si le contenu suivant arrivait par la droite).
+ *
+ * Ce site n'est pas une SPA (chaque page est un vrai fichier HTML
+ * séparé) — un swipe déclenche donc une vraie navigation
+ * (location.href), exactement comme un tap sur l'onglet correspondant.
+ */
+function initSwipeNavigation() {
+  const here = currentPage();
+  const currentIndex = PAGES.findIndex((p) => p.href === here);
+  // Page hors de la liste (ex: admin.html, login.html) : pas de
+  // "suivant/précédent" qui aurait un sens, on ne branche rien.
+  if (currentIndex === -1) return;
+
+  const MIN_DISTANCE = 70; // px — en dessous, on considère que ce n'est pas un vrai swipe volontaire
+  let startX = 0;
+  let startY = 0;
+  let ignoreThisTouch = false;
+
+  // Un élément a déjà son propre défilement horizontal (ex: le graphique
+  // en barres de stats.html) — dans ce cas, on laisse ce défilement
+  // natif se produire plutôt que de lui voler le geste pour changer de
+  // page. On vérifie l'élément touché ET ses parents, jusqu'à <body>.
+  function startsInsideHorizontalScroller(target) {
+    let el = target;
+    while (el && el !== document.body) {
+      if (el.scrollWidth > el.clientWidth + 1) return true;
+      el = el.parentElement;
+    }
+    return false;
+  }
+
+  document.addEventListener('touchstart', (e) => {
+    const touch = e.touches[0];
+    startX = touch.clientX;
+    startY = touch.clientY;
+    ignoreThisTouch = startsInsideHorizontalScroller(e.target);
+  }, { passive: true });
+
+  document.addEventListener('touchend', (e) => {
+    if (ignoreThisTouch) return;
+
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
+
+    // Un vrai swipe de navigation doit être largement plus horizontal
+    // que vertical — sinon c'est un scroll de page vertical normal, pas
+    // une intention de changer d'onglet.
+    if (Math.abs(deltaX) < MIN_DISTANCE || Math.abs(deltaX) < Math.abs(deltaY)) return;
+
+    const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
+    if (nextIndex < 0 || nextIndex >= PAGES.length) return; // déjà au premier/dernier onglet
+
+    location.href = PAGES[nextIndex].href;
+  }, { passive: true });
+}
