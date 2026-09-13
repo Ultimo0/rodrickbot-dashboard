@@ -2,10 +2,14 @@
  * generate-commands.js
  * ------------------------------------------------------------------
  * Lit tous les fichiers de src/commands/ d'un projet RodrickBOT et
- * génère data/commands.json — le catalogue affiché sur commands.html.
+ * remplace le contenu de la table Postgres "commands" — le catalogue
+ * affiché sur commands.html.
  *
  * Usage :
  *   node scripts/generate-commands.js /chemin/vers/rodrickbot/src/commands
+ *
+ * Nécessite un fichier .env local avec DATABASE_URL renseigné (voir
+ * .env.example) — c'est la ligne juste en dessous qui le charge.
  *
  * Pourquoi un script séparé plutôt qu'une route API : RodrickBOT et
  * Rodrick Hub sont deux projets distincts, sur deux serveurs différents.
@@ -15,6 +19,7 @@
  * ------------------------------------------------------------------
  */
 
+import 'dotenv/config';
 import { readFileSync, readdirSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';

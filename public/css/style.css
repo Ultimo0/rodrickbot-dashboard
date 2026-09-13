@@ -282,17 +282,15 @@ h1 .dim {
 
   /* --- Phases 1-9 : composants ajoutés après le dashboard d'origine --- */
 
-  /* La nav peut contenir jusqu'à 6 liens + le sélecteur de thème + le
-     statut de connexion — plutôt que de tout écraser sur une largeur de
-     téléphone, on la rend défilante horizontalement (comme des onglets). */
-  .hub-nav {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  .hub-nav a { flex-shrink: 0; }
-  .auth-status { margin-left: 0; flex-shrink: 0; }
-  .theme-switcher { flex-shrink: 0; }
+  /* Les 5 liens de page vivent maintenant dans .hub-tabbar (en bas de
+     l'écran, voir plus loin) — on masque juste la copie du haut plutôt
+     que de la faire défiler horizontalement comme avant. Le sélecteur de
+     thème et le statut de connexion restent visibles ici : ce sont des
+     réglages ponctuels, pas une navigation entre pages, donc pas leur
+     place dans la barre d'onglets. */
+  .hub-nav-links { display: none; }
+  .hub-nav { justify-content: flex-end; gap: 10px; }
+  .auth-status { margin-left: 0; }
 
   .stats-cards { grid-template-columns: repeat(2, 1fr); }
   .admin-cards { grid-template-columns: 1fr; }
@@ -313,6 +311,86 @@ h1 .dim {
 
   .auth-form { padding: 24px 20px; }
   .auth-form button { align-self: stretch; }
+
+  /* Espace réservé en bas de page pour que le dernier élément de contenu
+     ne se retrouve jamais caché SOUS la barre d'onglets fixe (celle-ci
+     est en position: fixed, donc hors du flux normal — sans cette marge,
+     rien ne "pousserait" naturellement le contenu au-dessus d'elle).
+     env(safe-area-inset-bottom) ajoute l'espace supplémentaire nécessaire
+     sur les téléphones à geste de bas d'écran (iPhone récents). */
+  .page {
+    padding-bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ---------- Barre d'onglets mobile (bottom tab bar) ----------
+   Générée par nav.js (voir ce fichier pour la liste des pages) dans un
+   <nav id="hubTabBar">, ajouté à la fin de <body> sur CHAQUE page. Cachée
+   par défaut : ne devient une vraie barre d'onglets qu'en dessous de
+   641px, où elle remplace la nav du haut comme moyen de changer de page
+   (voir .hub-nav-links { display: none } ci-dessus). */
+.hub-tabbar {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .hub-tabbar {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    background: var(--card-solid);
+    border-top: 1px solid var(--border);
+    /* Le contenu réel est calé à 58px ; le reste est de la marge de
+       sécurité pour la zone de geste en bas d'écran (iPhone à encoche/
+       Dynamic Island). Sans padding-bottom ici, les icônes se
+       retrouveraient collées sous cette zone de geste système. */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .hub-tabbar a {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 58px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.68rem;
+    font-family: var(--font-body);
+    /* 58px de hauteur x largeur d'écran / 5 : bien au-dessus des ~44px
+       minimum recommandés pour une cible tactile fiable au pouce. */
+  }
+
+  .hub-tabbar a.active {
+    color: var(--teal);
+  }
+
+  .hub-tabbar-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  .hub-tabbar-label {
+    line-height: 1;
+  }
+}
+
+/* ---------- Palier intermédiaire (tablette / téléphone en paysage) ----------
+   Entre 641px et 900px, l'ancien CSS repassait directement en mise en
+   page desktop complète (la seule media query était max-width: 640px).
+   Sur cette plage — tablette portrait, ou téléphone en paysage — certains
+   éléments pensés pour un grand écran (cartes de stats sur 4 colonnes,
+   formulaires très larges) avaient trop peu de place pour respirer sans
+   pour autant justifier le mode mobile complet (barre d'onglets, colonne
+   unique partout). */
+@media (min-width: 641px) and (max-width: 900px) {
+  .stats-cards { grid-template-columns: repeat(2, 1fr); }
+  .auth-form { max-width: 420px; margin-inline: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
