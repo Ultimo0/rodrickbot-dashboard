@@ -138,9 +138,18 @@ async function uploadToCloudinary(blob) {
     method: 'POST',
     body: formData,
   });
-  if (!res.ok) throw new Error("L'envoi de la photo a échoué.");
 
-  const data = await res.json();
+  const data = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    // Cloudinary renvoie toujours une raison précise dans le corps de la
+    // réponse (ex: "Upload preset must be whitelisted for unsigned
+    // uploads", "Invalid cloud_name") — on l'affiche telle quelle plutôt
+    // qu'un message générique, pour savoir directement quoi corriger.
+    const reason = data?.error?.message || `HTTP ${res.status}`;
+    throw new Error(`Cloudinary a refusé l'envoi : ${reason}`);
+  }
+
   return data.secure_url;
 }
 
