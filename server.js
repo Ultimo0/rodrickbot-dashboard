@@ -3,7 +3,7 @@ import http from 'http';
 import express from 'express';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
-import { PORT, PUBLIC_DIR, SESSION_SECRET, warnIfMisconfigured } from './src/config.js';
+import { PORT, PUBLIC_DIR, SESSION_SECRET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, warnIfMisconfigured } from './src/config.js';
 import { pool } from './src/db.js';
 import { instancesRouter } from './src/routes/instances.js';
 import { releasesRouter } from './src/routes/releases.js';
@@ -12,6 +12,7 @@ import { authRouter } from './src/routes/auth.js';
 import { adminRouter } from './src/routes/admin.js';
 import { postsRouter } from './src/routes/posts.js';
 import { statsRouter } from './src/routes/stats.js';
+import { profileRouter } from './src/routes/profile.js';
 import { initRealtime } from './src/realtime.js';
 
 warnIfMisconfigured();
@@ -53,6 +54,18 @@ app.use('/api', authRouter);
 app.use('/api', adminRouter);
 app.use('/api', postsRouter);
 app.use('/api', statsRouter);
+app.use('/api', profileRouter);
+
+// Publique et volontairement sans authentification : ces deux valeurs ne
+// sont pas des secrets (voir le commentaire sur CLOUDINARY_CLOUD_NAME
+// dans src/config.js) — le navigateur en a besoin pour uploader une photo
+// de profil DIRECTEMENT vers Cloudinary, sans repasser par notre serveur.
+app.get('/api/config', (req, res) => {
+  res.json({
+    cloudinaryCloudName: CLOUDINARY_CLOUD_NAME,
+    cloudinaryUploadPreset: CLOUDINARY_UPLOAD_PRESET,
+  });
+});
 
 // Middleware d'erreur global — reçoit tout ce que ah() (src/utils/asyncHandler.js)
 // redirige avec next(err), typiquement une requête Postgres qui échoue

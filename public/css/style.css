@@ -371,8 +371,25 @@ h1 .dim {
   }
 
   .hub-tabbar-icon {
-    font-size: 1.25rem;
+    display: flex;
     line-height: 1;
+  }
+
+  /* Les icônes utilisent stroke="currentColor" (voir nav.js) : elles
+     héritent automatiquement de la couleur du lien parent — aucune règle
+     de couleur à écrire ici, le changement d'état actif ci-dessus suffit
+     déjà à les recolorer. */
+  .hub-tabbar-icon svg {
+    width: 22px;
+    height: 22px;
+    transition: transform 0.15s ease;
+  }
+
+  /* Petit effet de pression au tap (comme un bouton natif iOS/Android) —
+     :active fonctionne aussi bien au toucher qu'à la souris, pas besoin
+     de JS pour ça. */
+  .hub-tabbar a:active .hub-tabbar-icon svg {
+    transform: scale(0.85);
   }
 
   .hub-tabbar-label {
@@ -645,6 +662,31 @@ h1 .dim {
   font-size: 0.85rem;
 }
 
+.nav-profile-link {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.nav-avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--violet);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+
 .hub-nav { display: flex; align-items: center; }
 .auth-status { margin-left: auto; padding: 10px 16px; }
 
@@ -717,6 +759,137 @@ h1 .dim {
 
 .profile-row:last-of-type { border-bottom: none; }
 .profile-label { color: var(--muted); font-size: 0.85rem; }
+
+/* ---------- Avatar éditable ---------- */
+
+.profile-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.avatar-wrap {
+  position: relative;
+  width: 104px;
+  height: 104px;
+}
+
+/* .avatar-img sert de classe COMMUNE à la vraie <img> ET au fallback
+   (le rond avec l'initiale) : les deux doivent occuper exactement le même
+   cercle, un seul des deux étant affiché à la fois (voir renderAvatar()
+   dans profile.js). */
+.avatar-img {
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+}
+
+.avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--violet);
+  color: white;
+  font-size: 2.2rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+
+.avatar-edit-btn {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid var(--card-solid);
+  background: var(--teal);
+  color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.avatar-edit-btn svg { width: 16px; height: 16px; }
+.avatar-edit-btn:active { transform: scale(0.9); }
+
+.profile-name-input {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  text-align: center;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  padding: 2px 4px;
+  max-width: 100%;
+}
+
+.profile-name-input:focus {
+  outline: none;
+  border-bottom-color: var(--violet);
+}
+
+/* ---------- Bio ---------- */
+
+.profile-section { margin-bottom: 18px; }
+.profile-section .profile-label { display: block; margin-bottom: 6px; }
+
+.bio-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 16px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.bio-input:focus { outline: none; border-color: var(--violet); }
+
+.bio-counter {
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* ---------- Statuts (succès / erreur / en cours) ---------- */
+
+.field-status {
+  font-size: 0.85rem;
+  border-radius: 10px;
+  padding: 8px 14px;
+  margin-bottom: 14px;
+}
+
+.field-status-pending { color: var(--muted); }
+.field-status-success { color: var(--teal); background: rgba(45, 212, 191, 0.1); }
+.field-status-error { color: var(--coral); background: rgba(251, 113, 133, 0.1); }
+
+.save-btn {
+  width: 100%;
+  background: var(--teal);
+  color: var(--bg);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.save-btn:hover { filter: brightness(1.1); }
+.save-btn:active { transform: scale(0.98); }
 
 .role-badge {
   background: rgba(139, 124, 246, 0.12);
@@ -802,7 +975,7 @@ h1 .dim {
   flex-wrap: wrap;
 }
 
-.user-main { flex: 1; min-width: 160px; }
+.user-main { flex: 1; min-width: 160px; display: flex; align-items: center; gap: 10px; }
 .user-name { font-weight: 600; font-size: 0.92rem; }
 .user-email { color: var(--muted); font-size: 0.8rem; }
 

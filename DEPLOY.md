@@ -124,6 +124,28 @@ npm install
 node scripts/generate-commands.js /chemin/local/vers/rodrickbot/src/commands
 ```
 
+## 9. Photo de profil — configurer Cloudinary
+
+Nécessaire pour que le changement de photo de profil fonctionne (`profile.html`).
+
+1. Crée un compte gratuit sur [cloudinary.com](https://cloudinary.com) (aucune carte requise).
+2. Sur le tableau de bord, note ton **Cloud name** (affiché en haut) —
+   c'est la valeur de `CLOUDINARY_CLOUD_NAME`.
+3. Va dans **Settings** → **Upload** → **Upload presets** → **Add upload preset** :
+   - **Signing Mode** : `Unsigned` (indispensable — c'est ce qui permet au
+     navigateur d'uploader directement, sans exposer ta clé secrète).
+   - **Folder** : ex. `rodrick-hub-avatars` (garde les photos du Hub à part du reste du compte).
+   - **Allowed formats** : `jpg, png, webp` (limite les abus).
+   - Donne-lui un nom simple (ex. `rodrick_hub_avatars`) → c'est la valeur de `CLOUDINARY_UPLOAD_PRESET`.
+4. Ajoute ces deux valeurs dans les variables d'environnement Render (comme `DATABASE_URL` à l'étape 4).
+
+⚠️ **Point de sécurité à connaître** : un upload "non signé" est accessible à
+quiconque connaît ton cloud name + preset (visibles dans le code du
+navigateur, c'est normal et documenté par Cloudinary) — pas seulement
+depuis ton Hub. Le format restreint (étape 3) limite les abus, mais si tu
+veux un contrôle plus strict plus tard, un upload "signé" (généré côté
+serveur) est possible — dis-le-moi si tu veux qu'on bascule dessus.
+
 ## Points à ne pas négliger
 
 - **Mise en veille** : le plan gratuit de Render endort le service après 15

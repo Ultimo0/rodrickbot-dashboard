@@ -83,8 +83,19 @@ async function initSchema() {
       "passwordHash" TEXT NOT NULL,
       role           TEXT NOT NULL DEFAULT 'user',  -- 'user' ou 'admin'
       "createdAt"    BIGINT NOT NULL,
-      name           TEXT
+      name           TEXT,
+      bio            TEXT,
+      "avatarUrl"    TEXT
     );
+
+    -- Migration défensive : sur une base DÉJÀ existante (le Hub tournait
+    -- avant l'ajout du profil complet), la table users existe déjà sans
+    -- ces deux colonnes — CREATE TABLE IF NOT EXISTS ci-dessus ne les
+    -- ajouterait pas puisque la table n'est pas recréée. IF NOT EXISTS
+    -- ici rend ces lignes sûres à rejouer à chaque démarrage, y compris
+    -- sur une base qui les a déjà (aucune erreur, aucun doublon).
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
 
     CREATE TABLE IF NOT EXISTS posts (
       id          SERIAL PRIMARY KEY,

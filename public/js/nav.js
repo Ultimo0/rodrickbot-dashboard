@@ -22,12 +22,26 @@
  * changer de page — voir initSwipeNavigation() plus bas.
  */
 
+// Icônes en SVG "trait" (stroke), dans l'esprit Feather/Lucide, dessinées
+// à la main plutôt qu'importées d'une bibliothèque — juste 5 icônes,
+// inutile d'ajouter une dépendance externe pour ça. stroke="currentColor"
+// est la partie importante : l'icône hérite automatiquement de la couleur
+// CSS de son lien parent (.hub-tabbar-icon), donc elle s'adapte toute
+// seule aux 4 thèmes ET à l'état actif, sans variante à maintenir.
+const ICONS = {
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>',
+  rocket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5c2.3 2 3.8 5.3 3.8 8.7 0 1.9-.5 3.7-1.2 5L12 19l-2.6-2.8c-.7-1.3-1.2-3.1-1.2-5 0-3.4 1.5-6.7 3.8-8.7z"/><path d="M9.3 15.3 7 17.6l-.8 2.7 2.7-.8 2.3-2.3"/><circle cx="12" cy="10.2" r="1.4"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.4-2.5 1a7.5 7.5 0 0 0-1.7-1L15 3h-4l-.3 2.6a7.5 7.5 0 0 0-1.7 1l-2.5-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.4 2.5-1c.5.4 1.1.8 1.7 1L11 21h4l.3-2.6c.6-.2 1.2-.6 1.7-1l2.5 1 2-3.4z"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="15"/></svg>',
+};
+
 const PAGES = [
-  { href: 'index.html', label: 'Dashboard', icon: '🏠' },
-  { href: 'releases.html', label: 'Versions', icon: '🚀' },
-  { href: 'commands.html', label: 'Commandes', icon: '⚙️' },
-  { href: 'community.html', label: 'Communauté', icon: '💬' },
-  { href: 'stats.html', label: 'Statistiques', icon: '📊' },
+  { href: 'index.html', label: 'Dashboard', icon: ICONS.home },
+  { href: 'releases.html', label: 'Versions', icon: ICONS.rocket },
+  { href: 'commands.html', label: 'Commandes', icon: ICONS.gear },
+  { href: 'community.html', label: 'Communauté', icon: ICONS.chat },
+  { href: 'stats.html', label: 'Statistiques', icon: ICONS.chart },
 ];
 
 function currentPage() {

@@ -30,7 +30,7 @@ authRouter.post('/auth/register', ah(async (req, res) => {
 
   req.session.userId = user.id;
 
-  res.json({ ok: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+  res.json({ ok: true, user: { id: user.id, email: user.email, name: user.name, role: user.role, avatarUrl: user.avatarUrl || null } });
 }));
 
 authRouter.post('/auth/login', ah(async (req, res) => {
@@ -48,7 +48,7 @@ authRouter.post('/auth/login', ah(async (req, res) => {
   if (!passwordMatches) return res.status(401).json(invalidMessage);
 
   req.session.userId = user.id;
-  res.json({ ok: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+  res.json({ ok: true, user: { id: user.id, email: user.email, name: user.name, role: user.role, avatarUrl: user.avatarUrl || null } });
 }));
 
 authRouter.post('/auth/logout', (req, res) => {
@@ -62,5 +62,13 @@ authRouter.post('/auth/logout', (req, res) => {
 // "Connexion" selon le cas).
 authRouter.get('/auth/me', requireAuth, ah(async (req, res) => {
   const user = await findUserById(req.session.userId);
-  res.json({ id: user.id, email: user.email, name: user.name, role: user.role, createdAt: user.createdAt });
+  res.json({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    createdAt: user.createdAt,
+    bio: user.bio || '',
+    avatarUrl: user.avatarUrl || null,
+  });
 }));

@@ -34,11 +34,37 @@ export async function findUserById(id) {
 /** Ne renvoie JAMAIS passwordHash — utilisé pour les listes/profils publics. */
 export async function listUsers() {
   const { rows } = await pool.query(
-    'SELECT id, email, name, role, "createdAt" FROM users ORDER BY "createdAt" DESC'
+    'SELECT id, email, name, role, "createdAt", "avatarUrl" FROM users ORDER BY "createdAt" DESC'
   );
   return rows;
 }
 
 export async function updateUserRole(id, role) {
   await pool.query('UPDATE users SET role = $1 WHERE id = $2', [role, id]);
+}
+
+/**
+ * Met à jour uniquement les champs fournis (les autres gardent leur
+ * valeur actuelle) — on relit d'abord la ligne existante puis on fusionne,
+ * plutôt que de construire une requête SQL dont la liste de colonnes
+ * change selon ce qui a été envoyé. Une seule forme de requête, toujours
+ * la même, plus simple à relire et à déboguer que du SQL généré
+ * dynamiquement.
+ */
+export async function updateProfile(id, { name, bio, avatarUrl }) {
+  const current = await findUserById(id);
+  if (!current) return null;
+
+  const merged = {
+    name: name !== undefined ? name : current.name,
+    bio: bio !== undefined ? bio : current.bio,
+    avatarUrl: avatarUrl !== undefined ? avatarUrl : current.avatarUrl,
+  };
+
+  await pool.query(
+    'UPDATE users SET name = $1, bio = $2, "avatarUrl" = $3 WHERE id = $4',
+    [merged.name, merged.bio, merged.avatarUrl, id]
+  );
+
+  return { ...current, ...merged };
 }

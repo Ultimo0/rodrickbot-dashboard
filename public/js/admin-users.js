@@ -9,6 +9,14 @@ function escapeHtml(str) {
   }[c]));
 }
 
+function avatarHtml(user) {
+  if (user.avatarUrl) {
+    return `<img src="${escapeHtml(user.avatarUrl)}" alt="" class="nav-avatar" />`;
+  }
+  const initial = (user.name || user.email || '?').charAt(0).toUpperCase();
+  return `<span class="nav-avatar nav-avatar-fallback">${initial}</span>`;
+}
+
 function userRowHtml(user) {
   const isSelf = user.id === currentUserId;
   const nextRole = user.role === 'admin' ? 'user' : 'admin';
@@ -17,8 +25,11 @@ function userRowHtml(user) {
   return `
     <div class="user-row">
       <div class="user-main">
-        <div class="user-name">${escapeHtml(user.name || '(sans nom)')} ${isSelf ? '<span class="you-tag">toi</span>' : ''}</div>
-        <div class="user-email">${escapeHtml(user.email)}</div>
+        ${avatarHtml(user)}
+        <div>
+          <div class="user-name">${escapeHtml(user.name || '(sans nom)')} ${isSelf ? '<span class="you-tag">toi</span>' : ''}</div>
+          <div class="user-email">${escapeHtml(user.email)}</div>
+        </div>
       </div>
       <span class="role-badge ${user.role === 'admin' ? 'role-admin' : ''}">${user.role === 'admin' ? 'Administrateur' : 'Membre'}</span>
       <button
