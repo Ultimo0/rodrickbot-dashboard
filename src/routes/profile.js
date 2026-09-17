@@ -23,10 +23,14 @@ profileRouter.patch('/profile', requireAuth, ah(async (req, res) => {
   if (bio !== undefined && typeof bio === 'string' && bio.length > BIO_MAX_LENGTH) {
     return res.status(400).json({ error: `La bio ne peut pas dépasser ${BIO_MAX_LENGTH} caractères.` });
   }
-  // avatarUrl : on fait confiance à l'URL renvoyée par Cloudinary après un
-  // upload réussi (voir profile.js côté navigateur) — on ne revalide pas
-  // le format ici, une URL Cloudinary valide est déjà garantie par le
-  // fait qu'elle vient de leur réponse d'upload, pas d'une saisie libre.
+  // On fait confiance à l'URL renvoyée par Cloudinary après un upload
+  // réussi (voir profile.js côté navigateur), mais on vérifie quand même
+  // ici qu'elle pointe bien vers Cloudinary — en défense en profondeur,
+  // au cas où quelqu'un appellerait cette route directement (en
+  // contournant l'interface) avec une URL arbitraire.
+  if (avatarUrl !== undefined && avatarUrl !== null && !String(avatarUrl).startsWith('https://res.cloudinary.com/')) {
+    return res.status(400).json({ error: 'URL de photo de profil invalide.' });
+  }
 
   const updated = await updateProfile(req.session.userId, { name, bio, avatarUrl });
   if (!updated) return res.status(404).json({ error: 'Compte introuvable.' });

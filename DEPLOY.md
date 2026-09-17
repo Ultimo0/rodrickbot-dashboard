@@ -146,6 +146,15 @@ depuis ton Hub. Le format restreint (étape 3) limite les abus, mais si tu
 veux un contrôle plus strict plus tard, un upload "signé" (généré côté
 serveur) est possible — dis-le-moi si tu veux qu'on bascule dessus.
 
+## 10. Mot de passe oublié — configurer Resend
+
+Nécessaire pour que "Mot de passe oublié" (`forgot-password.html`) envoie réellement un email.
+
+1. Crée un compte gratuit sur [resend.com](https://resend.com) (aucune carte requise, 3 000 emails/mois offerts en permanence).
+2. **API Keys** → **Create API Key** → copie la clé → c'est la valeur de `RESEND_API_KEY`.
+3. Sans domaine personnalisé (cas de ce déploiement), laisse `RESEND_FROM_EMAIL` vide — le Hub utilisera l'adresse de test par défaut de Resend. Certains fournisseurs de messagerie peuvent classer ces emails en spam ; si ça arrive souvent, vérifier un domaine dans Resend (**Domains** → **Add**) réglera le problème, mais suppose d'avoir un nom de domaine à toi.
+4. Ajoute `RESEND_API_KEY` dans les variables d'environnement Render.
+
 ## Points à ne pas négliger
 
 - **Mise en veille** : le plan gratuit de Render endort le service après 15

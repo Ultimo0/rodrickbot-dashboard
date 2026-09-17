@@ -734,6 +734,12 @@ h1 .dim {
 
 .auth-form button:hover { filter: brightness(1.15); }
 
+.form-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0 0 4px;
+}
+
 .form-error {
   display: none;
   color: var(--coral);

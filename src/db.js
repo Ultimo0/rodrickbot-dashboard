@@ -97,6 +97,21 @@ async function initSchema() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT;
 
+    -- Pour "mot de passe oublié" (voir src/routes/auth.js) : un jeton à
+    -- usage unique et sa date d'expiration. NULL la plupart du temps —
+    -- rempli seulement entre une demande de réinitialisation et son
+    -- utilisation (ou son expiration).
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS "resetToken" TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS "resetTokenExpiresAt" BIGINT;
+
+    -- Les emails sont désormais toujours comparés en minuscules côté
+    -- application (voir usersStore.js) — cette ligne aligne les comptes
+    -- créés AVANT ce changement, pour qu'un compte existant ne se
+    -- retrouve pas bloqué par une incohérence de casse. Idempotente :
+    -- après le premier passage, plus aucune ligne ne correspond à la
+    -- condition, donc plus aucun effet les fois suivantes.
+    UPDATE users SET email = lower(email) WHERE email <> lower(email);
+
     CREATE TABLE IF NOT EXISTS posts (
       id          SERIAL PRIMARY KEY,
       title       TEXT NOT NULL,
@@ -110,14 +125,42 @@ async function initSchema() {
     -- chaque instance, écrasé à chaque fois), cette table ajoute une ligne
     -- à CHAQUE heartbeat reçu — un vrai historique, nécessaire pour tracer
     -- une courbe d'activité dans le temps plutôt qu'une simple photo du
-    -- moment présent.
+    -- moment présent. Purgée périodiquement au-delà de HEARTBEAT_RETENTION_MS
+    -- (voir pruneOldHeartbeats plus bas et server.js) pour ne pas grossir
+    -- indéfiniment.
     CREATE TABLE IF NOT EXISTS heartbeat_log (
       id             SERIAL PRIMARY KEY,
       "instanceId"   TEXT NOT NULL,
       "messageCount" BIGINT,
       "timestamp"    BIGINT NOT NULL
     );
+
+    -- Sans ces index, chaque requête qui filtre par date (statsStore.js)
+    -- ou fait une jointure posts→auteur (postsStore.js) doit parcourir la
+    -- table entière ligne par ligne. Sans conséquence au volume actuel,
+    -- mais coûterait de plus en plus cher à mesure que ces tables
+    -- grossissent — autant les avoir dès maintenant, elles ne coûtent
+    -- rien tant que les tables sont petites.
+    CREATE INDEX IF NOT EXISTS heartbeat_log_timestamp_idx ON heartbeat_log ("timestamp");
+    CREATE INDEX IF NOT EXISTS posts_author_id_idx ON posts ("authorId");
   `);
+}
+
+/**
+ * Supprime les heartbeats plus vieux que HEARTBEAT_RETENTION_MS (90 jours
+ * par défaut — voir src/config.js). Pourquoi une purge plutôt qu'une
+ * agrégation en résumés quotidiens : aujourd'hui, TOUTES les vues
+ * statistiques du Hub (statsStore.js) ne consultent jamais plus de 30
+ * jours d'historique — garder 90 jours de détail brut laisse donc une
+ * bonne marge sans jamais couper une fenêtre réellement affichée à
+ * l'écran, pour un coût d'implémentation et un risque de bug bien
+ * moindres qu'un système d'agrégation. Si un jour une vue "sur un an"
+ * apparaît, on ajustera ce choix à ce moment-là.
+ */
+export async function pruneOldHeartbeats(retentionMs) {
+  const cutoff = Date.now() - retentionMs;
+  const { rowCount } = await pool.query('DELETE FROM heartbeat_log WHERE "timestamp" < $1', [cutoff]);
+  return rowCount;
 }
 
 await initSchema();

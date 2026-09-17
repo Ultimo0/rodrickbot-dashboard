@@ -28,9 +28,26 @@ export const DATABASE_URL = process.env.DATABASE_URL || '';
 export const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME || '';
 export const CLOUDINARY_UPLOAD_PRESET = process.env.CLOUDINARY_UPLOAD_PRESET || '';
 
+// Pour l'email "réinitialiser ton mot de passe" (voir src/routes/auth.js) :
+// il faut construire un lien complet vers CE Hub précis, pas juste un
+// chemin relatif. RENDER_EXTERNAL_URL est injectée automatiquement par
+// Render sur tout service web (pas besoin de la définir à la main) —
+// APP_URL permet de la remplacer explicitement si jamais elle manque
+// (Render ne la fournit pas pour les services créés avant l'existence de
+// cette variable) ou en développement local.
+export const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+export const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+export const APP_URL = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+
 // Une instance est considérée "hors ligne" si elle n'a pas envoyé de
 // heartbeat depuis plus longtemps que ça.
 export const OFFLINE_AFTER_MS = 10 * 60 * 1000;
+
+// Durée de conservation de l'historique brut des heartbeats (voir
+// src/db.js, pruneOldHeartbeats) — largement au-dessus des 30 jours que
+// les statistiques affichent réellement (src/store/statsStore.js), pour
+// ne jamais couper une fenêtre encore consultée à l'écran.
+export const HEARTBEAT_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 
 export function warnIfMisconfigured() {
   if (!DATABASE_URL) {
@@ -51,6 +68,11 @@ export function warnIfMisconfigured() {
   if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
     console.warn(
       "⚠️  CLOUDINARY_CLOUD_NAME / CLOUDINARY_UPLOAD_PRESET manquant(s) dans .env — le changement de photo de profil ne fonctionnera pas."
+    );
+  }
+  if (!RESEND_API_KEY) {
+    console.warn(
+      "⚠️  RESEND_API_KEY n'est pas défini dans .env — la réinitialisation de mot de passe par email ne fonctionnera pas."
     );
   }
 }
