@@ -146,14 +146,19 @@ depuis ton Hub. Le format restreint (étape 3) limite les abus, mais si tu
 veux un contrôle plus strict plus tard, un upload "signé" (généré côté
 serveur) est possible — dis-le-moi si tu veux qu'on bascule dessus.
 
-## 10. Mot de passe oublié — configurer Resend
+## 10. Mot de passe oublié — configurer Brevo
 
 Nécessaire pour que "Mot de passe oublié" (`forgot-password.html`) envoie réellement un email.
 
-1. Crée un compte gratuit sur [resend.com](https://resend.com) (aucune carte requise, 3 000 emails/mois offerts en permanence).
-2. **API Keys** → **Create API Key** → copie la clé → c'est la valeur de `RESEND_API_KEY`.
-3. Sans domaine personnalisé (cas de ce déploiement), laisse `RESEND_FROM_EMAIL` vide — le Hub utilisera l'adresse de test par défaut de Resend. Certains fournisseurs de messagerie peuvent classer ces emails en spam ; si ça arrive souvent, vérifier un domaine dans Resend (**Domains** → **Add**) réglera le problème, mais suppose d'avoir un nom de domaine à toi.
-4. Ajoute `RESEND_API_KEY` dans les variables d'environnement Render.
+1. Crée un compte gratuit sur [brevo.com](https://www.brevo.com) (300 emails/jour offerts en permanence, aucune carte requise).
+2. **Settings** (menu du compte) → **Senders, Domains, IPs** → **Senders** → **Add a sender** :
+   - Renseigne le nom ("Rodrick Hub") et l'adresse email d'envoi — utilise une adresse que tu possèdes vraiment (ex: ta propre adresse Gmail), tu vas devoir la confirmer à l'étape suivante.
+   - Un code à 6 chiffres arrive dans cette boîte mail → copie-le dans Brevo pour valider. **Aucun nom de domaine requis** — contrairement à d'autres services, Brevo n'exige la vérification d'un domaine que pour une délivrabilité optimale, pas pour envoyer tout court.
+   - Cette adresse vérifiée est la valeur de `BREVO_FROM_EMAIL`.
+3. **Settings** → **SMTP & API** → **API Keys** → **Generate a new API key** → copie la clé → c'est la valeur de `BREVO_API_KEY`.
+4. Ajoute `BREVO_API_KEY` et `BREVO_FROM_EMAIL` dans les variables d'environnement Render.
+
+⚠️ **Nuance de délivrabilité à connaître** : sans domaine authentifié (SPF/DKIM), l'envoi vers Gmail et Yahoo en particulier peut être un peu moins fiable qu'avec un domaine vérifié (Gmail/Yahoo ont durci leurs exigences anti-spam). Ça fonctionne, mais si tu constates des emails de réinitialisation qui n'arrivent pas chez des destinataires Gmail précisément, la vérification d'un domaine (si tu en achètes un un jour) réglera ça complètement.
 
 ## Points à ne pas négliger
 

@@ -35,8 +35,14 @@ export const CLOUDINARY_UPLOAD_PRESET = process.env.CLOUDINARY_UPLOAD_PRESET || 
 // APP_URL permet de la remplacer explicitement si jamais elle manque
 // (Render ne la fournit pas pour les services créés avant l'existence de
 // cette variable) ou en développement local.
-export const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-export const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+//
+// BREVO_FROM_EMAIL doit être une adresse VÉRIFIÉE dans Brevo (Settings →
+// Senders, Domains, IPs → Senders — un code à 6 chiffres reçu par email
+// suffit, aucun nom de domaine requis). Contrairement à certains services
+// équivalents, Brevo n'exige pas de domaine vérifié pour envoyer à
+// n'importe quel destinataire — seulement pour l'ADRESSE D'ENVOI.
+export const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
+export const BREVO_FROM_EMAIL = process.env.BREVO_FROM_EMAIL || '';
 export const APP_URL = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
 
 // Une instance est considérée "hors ligne" si elle n'a pas envoyé de
@@ -70,9 +76,9 @@ export function warnIfMisconfigured() {
       "⚠️  CLOUDINARY_CLOUD_NAME / CLOUDINARY_UPLOAD_PRESET manquant(s) dans .env — le changement de photo de profil ne fonctionnera pas."
     );
   }
-  if (!RESEND_API_KEY) {
+  if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
     console.warn(
-      "⚠️  RESEND_API_KEY n'est pas défini dans .env — la réinitialisation de mot de passe par email ne fonctionnera pas."
+      "⚠️  BREVO_API_KEY / BREVO_FROM_EMAIL manquant(s) dans .env — la réinitialisation de mot de passe par email ne fonctionnera pas."
     );
   }
 }

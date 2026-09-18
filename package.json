@@ -19,7 +19,6 @@
     "express-session": "^1.18.0",
     "express-rate-limit": "^7.4.1",
     "helmet": "^8.0.0",
-    "resend": "^4.0.1",
     "ws": "^8.18.0"
   }
 }
