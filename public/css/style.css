@@ -7,43 +7,85 @@
    ========================================================= */
 
 :root {
-  /* Fond */
-  --bg: #090c16;
+  /* Fond — clair par défaut. Pas blanc pur (#fff) : un gris-bleu très
+     clair fatigue moins l'œil et laisse les bordures/ombres se voir. */
+  --bg: #f4f6fb;
   --bg-mesh:
-    radial-gradient(circle at 12% -10%, #2c1f6a3d, transparent 42%),
-    radial-gradient(circle at 88% 0%, #0a3a4a44, transparent 40%),
-    radial-gradient(circle at 50% 100%, #1a123a3d, transparent 55%);
-  --grid-line: rgba(148, 163, 209, 0.05);
+    radial-gradient(circle at 12% -10%, #ede9fe66, transparent 42%),
+    radial-gradient(circle at 88% 0%, #cffafe66, transparent 40%),
+    radial-gradient(circle at 50% 100%, #f5f3ff66, transparent 55%);
+  --grid-line: rgba(15, 23, 42, 0.045);
 
   /* Surfaces */
-  --card: rgba(20, 25, 41, 0.72);
-  --card-solid: #131a2c;
-  --card-hover: rgba(26, 32, 51, 0.85);
-  --border: rgba(148, 163, 209, 0.14);
-  --border-strong: rgba(148, 163, 209, 0.26);
+  --card: rgba(255, 255, 255, 0.75);
+  --card-solid: #ffffff;
+  --card-hover: rgba(241, 245, 249, 0.9);
+  --border: rgba(15, 23, 42, 0.1);
+  --border-strong: rgba(15, 23, 42, 0.18);
 
   /* Texte */
-  --text: #edf1fc;
-  --muted: #8996b8;
-  --muted-dim: #5d6889;
+  --text: #0f172a;
+  --muted: #5b6478;
+  --muted-dim: #8b93a7;
 
-  /* Accents */
-  --violet: #8b7cf6;
-  --violet-deep: #5b4fd1;
-  --violet-glow: #8b7cf655;
-  --teal: #2dd4bf;
-  --teal-glow: #2dd4bf55;
-  --coral: #fb7185;
-  --coral-glow: #fb718555;
-  --amber: #fbbf24;
-  --amber-glow: #fbbf2455;
-  --sky: #38bdf8;
+  /* Accents — plus soutenus que sur fond sombre : les teintes pastel
+     d'origine (pensées pour un fond très sombre) perdraient trop de
+     contraste sur un fond clair. Le sens de chaque couleur reste le même
+     (violet = accent principal, teal = "en ligne/succès", coral =
+     "hors ligne/erreur"), seule l'intensité change. */
+  --violet: #7c3aed;
+  --violet-deep: #5b21b6;
+  --violet-glow: #7c3aed33;
+  --teal: #0d9488;
+  --teal-glow: #0d948833;
+  --coral: #e11d48;
+  --coral-glow: #e11d4833;
+  --amber: #d97706;
+  --amber-glow: #d9770633;
+  --sky: #0284c7;
 
   --radius: 16px;
   --radius-sm: 10px;
   --font-display: "Space Grotesk", "Segoe UI", sans-serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Thème sombre — s'active automatiquement si le téléphone/l'ordinateur
+   est lui-même en mode sombre (aucun bouton, aucun JS : le navigateur
+   réévalue cette media query tout seul si l'utilisateur change de thème
+   système pendant que la page est ouverte). Ce sont les valeurs
+   originales du thème "Classique" du projet. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #090c16;
+    --bg-mesh:
+      radial-gradient(circle at 12% -10%, #2c1f6a3d, transparent 42%),
+      radial-gradient(circle at 88% 0%, #0a3a4a44, transparent 40%),
+      radial-gradient(circle at 50% 100%, #1a123a3d, transparent 55%);
+    --grid-line: rgba(148, 163, 209, 0.05);
+
+    --card: rgba(20, 25, 41, 0.72);
+    --card-solid: #131a2c;
+    --card-hover: rgba(26, 32, 51, 0.85);
+    --border: rgba(148, 163, 209, 0.14);
+    --border-strong: rgba(148, 163, 209, 0.26);
+
+    --text: #edf1fc;
+    --muted: #8996b8;
+    --muted-dim: #5d6889;
+
+    --violet: #8b7cf6;
+    --violet-deep: #5b4fd1;
+    --violet-glow: #8b7cf655;
+    --teal: #2dd4bf;
+    --teal-glow: #2dd4bf55;
+    --coral: #fb7185;
+    --coral-glow: #fb718555;
+    --amber: #fbbf24;
+    --amber-glow: #fbbf2455;
+    --sky: #38bdf8;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -98,8 +140,8 @@ h1 .dim {
   gap: 8px;
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(45, 212, 191, 0.1);
-  border: 1px solid rgba(45, 212, 191, 0.3);
+  background: color-mix(in srgb, var(--teal) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--teal) 30%, transparent);
   color: var(--teal);
   font-family: var(--font-mono);
   font-size: 0.76rem;
@@ -221,8 +263,8 @@ h1 .dim {
   font-size: 0.7rem; padding: 5px 12px; border-radius: 999px; font-weight: 700;
   white-space: nowrap; letter-spacing: 0.03em; font-family: var(--font-mono);
 }
-.badge.online { background: rgba(45, 212, 191, 0.12); color: var(--teal); box-shadow: inset 0 0 0 1px rgba(45, 212, 191, 0.3); }
-.badge.offline { background: rgba(251, 113, 133, 0.12); color: var(--coral); box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.3); }
+.badge.online { background: color-mix(in srgb, var(--teal) 12%, transparent); color: var(--teal); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--teal) 30%, transparent); }
+.badge.offline { background: color-mix(in srgb, var(--coral) 12%, transparent); color: var(--coral); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--coral) 30%, transparent); }
 
 .info-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; padding: 8px 0; border-top: 1px solid var(--border); }
 .info-row .k { color: var(--muted); }
@@ -232,14 +274,14 @@ h1 .dim {
   color: var(--muted); padding: 48px 20px; text-align: center;
   background: var(--card); border: 1px dashed var(--border); border-radius: var(--radius);
 }
-#error { color: var(--coral); display: none; border-color: rgba(251,113,133,0.3); background: rgba(251,113,133,0.06); }
+#error { color: var(--coral); display: none; border-color: color-mix(in srgb, var(--coral) 30%, transparent); background: color-mix(in srgb, var(--coral) 6%, transparent); }
 
 .top-commands { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 12px; }
 .top-commands .k { color: var(--muted); font-size: 0.76rem; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
 .cmd-row {
   display: flex; justify-content: space-between; align-items: center;
   font-size: 0.8rem; padding: 5px 10px; margin-bottom: 4px;
-  background: rgba(139, 124, 246, 0.07); border-radius: 8px;
+  background: color-mix(in srgb, var(--violet) 7%, transparent); border-radius: 8px;
   font-family: var(--font-mono);
 }
 .cmd-row span:first-child { color: var(--sky); }
@@ -257,12 +299,12 @@ h1 .dim {
 .toggle-btn:hover, .delete-btn:hover { filter: brightness(1.15); }
 .toggle-btn:active, .delete-btn:active { transform: translateY(1px); }
 
-.toggle-btn.is-on { background: rgba(45, 212, 191, 0.1); color: var(--teal); border-color: rgba(45, 212, 191, 0.3); }
-.toggle-btn.is-off { background: rgba(251, 113, 133, 0.1); color: var(--coral); border-color: rgba(251, 113, 133, 0.3); }
+.toggle-btn.is-on { background: color-mix(in srgb, var(--teal) 10%, transparent); color: var(--teal); border-color: color-mix(in srgb, var(--teal) 30%, transparent); }
+.toggle-btn.is-off { background: color-mix(in srgb, var(--coral) 10%, transparent); color: var(--coral); border-color: color-mix(in srgb, var(--coral) 30%, transparent); }
 
 .delete-btn {
-  background: rgba(251, 113, 133, 0.06); color: var(--coral);
-  border-color: rgba(251, 113, 133, 0.25); flex: 0 0 auto; width: 46px;
+  background: color-mix(in srgb, var(--coral) 6%, transparent); color: var(--coral);
+  border-color: color-mix(in srgb, var(--coral) 25%, transparent); flex: 0 0 auto; width: 46px;
 }
 
 /* ---------- Responsive (mobile) ---------- */
@@ -526,7 +568,7 @@ h1 .dim {
 }
 
 .badge-latest {
-  background: rgba(45, 212, 191, 0.12);
+  background: color-mix(in srgb, var(--teal) 12%, transparent);
   color: var(--teal);
   font-size: 0.7rem;
   font-weight: 600;
@@ -545,7 +587,7 @@ h1 .dim {
 .btn-download {
   display: inline-block;
   background: var(--teal);
-  color: #05221d;
+  color: var(--bg);
   text-decoration: none;
   font-weight: 600;
   font-size: 0.85rem;
@@ -554,6 +596,95 @@ h1 .dim {
 }
 
 .btn-download:hover { filter: brightness(1.1); }
+
+.release-admin-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+
+.release-checkbox input { width: 18px; height: 18px; cursor: pointer; }
+
+.btn-edit-outline,
+.btn-delete-outline,
+.btn-cancel-edit {
+  background: none;
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.btn-edit-outline:hover { border-color: var(--violet); color: var(--violet); }
+
+.btn-delete-outline,
+.btn-cancel-edit {
+  border-color: color-mix(in srgb, var(--coral) 40%, var(--border-strong));
+  color: var(--coral);
+}
+
+.btn-delete-outline:hover,
+.btn-cancel-edit:hover { background: color-mix(in srgb, var(--coral) 10%, transparent); }
+
+.bulk-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  background: color-mix(in srgb, var(--violet) 10%, transparent);
+  border: 1px solid var(--violet);
+  border-radius: 12px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+}
+
+.release-card.is-editing { border-color: var(--violet); }
+
+.release-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.release-edit-form input,
+.release-edit-form textarea {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+}
+
+.release-edit-form input:focus,
+.release-edit-form textarea:focus { outline: none; border-color: var(--violet); }
+
+.release-edit-actions { display: flex; gap: 10px; }
+
+.release-edit-actions button[type="submit"] {
+  background: var(--teal);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.edit-error {
+  display: none;
+  color: var(--coral);
+  font-size: 0.85rem;
+}
 
 /* =========================================================
    Phase 2 — Catalogue des commandes
@@ -616,7 +747,7 @@ h1 .dim {
 .command-tags { display: flex; gap: 6px; }
 
 .category-tag {
-  background: rgba(139, 124, 246, 0.12);
+  background: color-mix(in srgb, var(--violet) 12%, transparent);
   color: var(--violet);
   font-size: 0.72rem;
   font-weight: 600;
@@ -625,7 +756,7 @@ h1 .dim {
 }
 
 .admin-tag {
-  background: rgba(251, 113, 133, 0.12);
+  background: color-mix(in srgb, var(--coral) 12%, transparent);
   color: var(--coral);
   font-size: 0.72rem;
   font-weight: 600;
@@ -879,8 +1010,8 @@ h1 .dim {
 }
 
 .field-status-pending { color: var(--muted); }
-.field-status-success { color: var(--teal); background: rgba(45, 212, 191, 0.1); }
-.field-status-error { color: var(--coral); background: rgba(251, 113, 133, 0.1); }
+.field-status-success { color: var(--teal); background: color-mix(in srgb, var(--teal) 10%, transparent); }
+.field-status-error { color: var(--coral); background: color-mix(in srgb, var(--coral) 10%, transparent); }
 
 .save-btn {
   width: 100%;
@@ -898,7 +1029,7 @@ h1 .dim {
 .save-btn:active { transform: scale(0.98); }
 
 .role-badge {
-  background: rgba(139, 124, 246, 0.12);
+  background: color-mix(in srgb, var(--violet) 12%, transparent);
   color: var(--violet);
   font-size: 0.75rem;
   font-weight: 600;
@@ -932,7 +1063,7 @@ h1 .dim {
 }
 
 .denied-banner {
-  background: rgba(251, 113, 133, 0.1);
+  background: color-mix(in srgb, var(--coral) 10%, transparent);
   border: 1px solid var(--coral);
   color: var(--coral);
   border-radius: 12px;
@@ -986,7 +1117,7 @@ h1 .dim {
 .user-email { color: var(--muted); font-size: 0.8rem; }
 
 .you-tag {
-  background: rgba(45, 212, 191, 0.12);
+  background: color-mix(in srgb, var(--teal) 12%, transparent);
   color: var(--teal);
   font-size: 0.68rem;
   font-weight: 600;
@@ -1058,7 +1189,7 @@ h1 .dim {
 
 .reader-category {
   display: inline-block;
-  background: rgba(139, 124, 246, 0.12);
+  background: color-mix(in srgb, var(--violet) 12%, transparent);
   color: var(--violet);
   font-size: 0.72rem;
   font-weight: 600;
@@ -1232,7 +1363,7 @@ h1 .dim {
 .live-status.disconnected { color: var(--coral); border-color: var(--coral); }
 
 .notif-banner {
-  background: rgba(56, 189, 248, 0.12);
+  background: color-mix(in srgb, var(--sky) 12%, transparent);
   border: 1px solid var(--sky);
   color: var(--sky);
   border-radius: 12px;
@@ -1246,69 +1377,8 @@ h1 .dim {
 .notif-banner:hover { filter: brightness(1.1); }
 
 /* =========================================================
-   Phase 9 — Thèmes
-   ------------------------------------------------------------
-   Le thème "Classique" est celui défini dans :root, ci-dessus —
-   les 3 autres redéfinissent juste les mêmes variables avec
-   d'autres valeurs. Aucune règle CSS ailleurs dans ce fichier
-   n'a besoin de changer : tout utilise déjà var(--xxx).
+   Thème clair/sombre — voir :root et @media (prefers-color-scheme: dark)
+   tout en haut de ce fichier. Purement automatique (aucun sélecteur,
+   aucun JS) : le navigateur applique celui qui correspond au réglage du
+   système d'exploitation.
    ========================================================= */
-
-[data-theme="royal"] {
-  --bg: #120a1f;
-  --card: rgba(35, 20, 50, 0.75);
-  --card-solid: #1e1330;
-  --border: rgba(196, 165, 224, 0.16);
-  --border-strong: rgba(196, 165, 224, 0.3);
-  --text: #f3e8ff;
-  --muted: #b9a0d4;
-  --violet: #c084fc;
-  --violet-deep: #9d5cf0;
-  --sky: #fbbf24;   /* de l'or plutôt que du bleu — l'esprit "royal" */
-  --amber: #fbbf24;
-  --teal: #34d399;  /* reste vert : le sens "positif/en ligne" ne doit pas changer d'un thème à l'autre */
-  --coral: #f87171; /* reste rouge : pareil pour "erreur/danger" */
-}
-
-[data-theme="neon"] {
-  --bg: #05060a;
-  --card: rgba(10, 16, 22, 0.8);
-  --card-solid: #0b1016;
-  --border: rgba(0, 229, 255, 0.18);
-  --border-strong: rgba(0, 229, 255, 0.35);
-  --text: #e0fbff;
-  --muted: #6fa8b8;
-  --violet: #ff2ec4;
-  --violet-deep: #d0179e;
-  --sky: #00e5ff;
-  --amber: #faff00;
-  --teal: #39ff14;
-  --coral: #ff2e4c;
-}
-
-[data-theme="mono"] {
-  --bg: #0a0a0a;
-  --card: rgba(255, 255, 255, 0.04);
-  --card-solid: #151515;
-  --border: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.24);
-  --text: #f0f0f0;
-  --muted: #999999;
-  --violet: #e5e5e5;      /* accent principal = blanc cassé plutôt qu'une couleur */
-  --violet-deep: #c9c9c9;
-  --sky: #cfcfcf;
-  --amber: #d9d9d9;
-  --teal: #8fd9bd;        /* légèrement teinté malgré tout : sans ça, "en ligne" et "hors ligne" deviendraient indiscernables */
-  --coral: #e0a3a3;
-}
-
-.theme-switcher {
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 20px;
-  padding: 6px 12px;
-  font-size: 0.78rem;
-  margin-left: 8px;
-  cursor: pointer;
-}

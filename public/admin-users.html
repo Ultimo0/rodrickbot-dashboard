@@ -2,9 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('rodrick_hub_theme') || 'classique');</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="theme-color" content="#090c16" />
+<meta name="theme-color" content="#f4f6fb" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#090c16" media="(prefers-color-scheme: dark)" />
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icons/icon-192.png" />
 <title>Rodrick Hub — Utilisateurs</title>
@@ -22,12 +22,6 @@
 
     <nav class="hub-nav" id="hubNav">
       <div class="hub-nav-links" id="hubNavLinks"></div>
-      <select id="themeSwitcher" class="theme-switcher">
-        <option value="classique">Classique</option>
-        <option value="royal">Royal</option>
-        <option value="neon">Neon</option>
-        <option value="mono">Mono</option>
-      </select>
       <span id="authStatus" class="auth-status"></span>
     </nav>
 
@@ -42,7 +36,6 @@
   <script src="js/admin-guard.js"></script>
   <script src="js/admin-users.js"></script>
   <script src="js/nav.js"></script>
-  <script src="js/theme.js"></script>
   <script src="js/auth-nav.js"></script>
 </body>
 </html>

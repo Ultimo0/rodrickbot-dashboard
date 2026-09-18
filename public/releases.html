@@ -2,9 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('rodrick_hub_theme') || 'classique');</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="theme-color" content="#090c16" />
+<meta name="theme-color" content="#f4f6fb" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#090c16" media="(prefers-color-scheme: dark)" />
 <link rel="manifest" href="manifest.json" />
 <link rel="apple-touch-icon" href="icons/icon-192.png" />
 <title>Rodrick Hub — Versions</title>
@@ -24,19 +24,17 @@
 
     <nav class="hub-nav" id="hubNav">
       <div class="hub-nav-links" id="hubNavLinks"></div>
-      <select id="themeSwitcher" class="theme-switcher">
-        <option value="classique">Classique</option>
-        <option value="royal">Royal</option>
-        <option value="neon">Neon</option>
-        <option value="mono">Mono</option>
-      </select>
       <span id="authStatus" class="auth-status"></span>
     </nav>
 
     <div id="latestBanner"></div>
 
-    <details class="publish-panel">
-      <summary>➕ Publier une nouvelle version (admin)</summary>
+    <!-- Masqué par défaut — révélé par releases.js uniquement si la
+         personne connectée est admin (voir /api/auth/me). Un visiteur
+         normal ne voit ni ce panneau de publication, ni les cases à
+         cocher / boutons modifier / supprimer sur les cartes plus bas. -->
+    <details id="publishPanel" class="publish-panel" style="display:none">
+      <summary>➕ Publier une nouvelle version</summary>
       <div id="keyBar">
         <input id="apiKeyInput" type="password" placeholder="Clé API du dashboard" />
       </div>
@@ -50,6 +48,11 @@
       <div id="publishError"></div>
     </details>
 
+    <div id="bulkToolbar" class="bulk-toolbar" style="display:none">
+      <span id="bulkCount"></span>
+      <button id="bulkDeleteBtn" class="btn-delete-outline">Supprimer la sélection</button>
+    </div>
+
     <div id="error"></div>
     <div id="releasesList" class="release-list"></div>
     <div id="empty" style="display:none">Aucune version publiée pour le moment.</div>
@@ -57,7 +60,6 @@
 
   <script src="js/releases.js"></script>
   <script src="js/nav.js"></script>
-  <script src="js/theme.js"></script>
   <script src="js/auth-nav.js"></script>
 </body>
 </html>
