@@ -132,6 +132,18 @@ h1 .dim {
   font-weight: 500;
   font-size: 0.62em;
 }
+
+/* stroke="currentColor" (voir le SVG lui-même) : l'icône hérite de la
+   couleur du texte du h1, donc s'adapte toute seule aux 2 thèmes, sans
+   règle de couleur à écrire ici. */
+.brand-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.brand-icon svg {
+  width: 0.85em;
+  height: 0.85em;
+}
 .subtitle { color: var(--muted); font-size: 0.92rem; }
 
 .live-pill {
@@ -786,18 +798,38 @@ h1 .dim {
 .page-narrow .page-header { justify-content: center; text-align: center; }
 
 .auth-status a {
-  margin-left: auto;
   color: var(--sky);
   text-decoration: none;
   font-weight: 600;
   font-size: 0.85rem;
 }
 
+.auth-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .nav-profile-link {
   display: inline-flex !important;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  text-align: center;
 }
+
+/* Cet indicateur (en haut de chaque page) a besoin d'un avatar plus
+   visible qu'une simple miniature dans une liste — .nav-avatar reste à
+   24px par défaut pour la liste des comptes admin (admin-users.html),
+   cette règle l'agrandit UNIQUEMENT ici, à l'intérieur de
+   .nav-profile-link. */
+.nav-profile-link .nav-avatar,
+.nav-profile-link .nav-avatar-fallback {
+  width: 36px;
+  height: 36px;
+}
+
+.nav-profile-link .nav-avatar-fallback { font-size: 1rem; }
 
 .nav-avatar {
   width: 24px;
