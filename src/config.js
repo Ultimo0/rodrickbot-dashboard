@@ -45,6 +45,15 @@ export const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
 export const BREVO_FROM_EMAIL = process.env.BREVO_FROM_EMAIL || '';
 export const APP_URL = process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
 
+// Notifications push (voir src/push.js). VAPID_CONTACT_EMAIL est requis
+// par la norme Web Push — c'est l'adresse que les services de
+// notification (Google, Mozilla...) utilisent pour te contacter en cas
+// d'abus détecté depuis ce serveur, pas une adresse visible des
+// utilisateurs.
+export const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || '';
+export const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
+export const VAPID_CONTACT_EMAIL = process.env.VAPID_CONTACT_EMAIL || '';
+
 // Une instance est considérée "hors ligne" si elle n'a pas envoyé de
 // heartbeat depuis plus longtemps que ça.
 export const OFFLINE_AFTER_MS = 10 * 60 * 1000;
@@ -79,6 +88,11 @@ export function warnIfMisconfigured() {
   if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
     console.warn(
       "⚠️  BREVO_API_KEY / BREVO_FROM_EMAIL manquant(s) dans .env — la réinitialisation de mot de passe par email ne fonctionnera pas."
+    );
+  }
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    console.warn(
+      "⚠️  VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY manquant(s) dans .env — les notifications push ne fonctionneront pas."
     );
   }
 }

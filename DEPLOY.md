@@ -160,6 +160,21 @@ Nécessaire pour que "Mot de passe oublié" (`forgot-password.html`) envoie rée
 
 ⚠️ **Nuance de délivrabilité à connaître** : sans domaine authentifié (SPF/DKIM), l'envoi vers Gmail et Yahoo en particulier peut être un peu moins fiable qu'avec un domaine vérifié (Gmail/Yahoo ont durci leurs exigences anti-spam). Ça fonctionne, mais si tu constates des emails de réinitialisation qui n'arrivent pas chez des destinataires Gmail précisément, la vérification d'un domaine (si tu en achètes un un jour) réglera ça complètement.
 
+## 11. Notifications push — configurer les clés VAPID
+
+Nécessaire pour que "Activer les notifications" (sur `profile.html`) fonctionne.
+
+Une paire de clés a déjà été générée pour ce projet — ajoute-la telle quelle dans les variables d'environnement Render (aucune régénération nécessaire) :
+
+```
+VAPID_PUBLIC_KEY=BMlHQdklHb7hfbvmP7z8yFwFPNGVrofGH_gqQBqtenSOt2NN6IAGsnALAPr3PwVkdgyfj9zBqwwM_KBMFlCxq0Y
+VAPID_PRIVATE_KEY=IH2GKLxUk0X5io8_7KYrww4EpqEaCsdHfIjaR70ypfE
+```
+
+Ajoute aussi `VAPID_CONTACT_EMAIL` avec ta propre adresse email (voir `.env.example` pour le détail de son usage).
+
+⚠️ `VAPID_PRIVATE_KEY` doit rester secrète, exactement comme les autres clés de ce guide — jamais committée dans Git.
+
 ## Points à ne pas négliger
 
 - **Mise en veille** : le plan gratuit de Render endort le service après 15

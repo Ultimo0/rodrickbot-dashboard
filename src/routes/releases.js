@@ -3,6 +3,8 @@ import { requireApiKey } from '../middleware/requireApiKey.js';
 import { requireAuth } from '../middleware/requireAuth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { loadReleases, addRelease, getLatestRelease, getReleaseById, updateRelease, deleteReleases } from '../store/releasesStore.js';
+import { broadcast } from '../realtime.js';
+import { sendPushToAll } from '../push.js';
 import { ah } from '../utils/asyncHandler.js';
 
 export const releasesRouter = Router();
@@ -37,12 +39,24 @@ releasesRouter.post('/releases', requireApiKey, ah(async (req, res) => {
     return res.status(400).json({ error: '"version" et "date" sont obligatoires.' });
   }
 
-  await addRelease({
+  const release = await addRelease({
     version,
     date,
     changelog: changelog || '',
     downloadUrl: downloadUrl || null,
   });
+
+  // Diffusion en temps réel (bannière + badge, voir js/nav.js) à tous les
+  // navigateurs actuellement ouverts sur le Hub, PUIS notification push
+  // (voir src/push.js) pour celles et ceux qui ont activé les
+  // notifications et n'ont pas le Hub ouvert en ce moment — les deux
+  // canaux sont indépendants, l'un ne remplace pas l'autre.
+  broadcast({ type: 'new-release', release });
+  sendPushToAll({
+    title: 'Nouvelle version de RodrickBOT',
+    body: `v${release.version} est disponible.`,
+    url: '/releases.html',
+  }).catch((err) => console.error('Échec sendPushToAll (release) :', err));
 
   res.json({ ok: true, version });
 }));

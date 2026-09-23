@@ -4,7 +4,7 @@ import express from 'express';
 import helmet from 'helmet';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
-import { PORT, PUBLIC_DIR, SESSION_SECRET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, HEARTBEAT_RETENTION_MS, warnIfMisconfigured } from './src/config.js';
+import { PORT, PUBLIC_DIR, SESSION_SECRET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, VAPID_PUBLIC_KEY, HEARTBEAT_RETENTION_MS, warnIfMisconfigured } from './src/config.js';
 import { pool, pruneOldHeartbeats } from './src/db.js';
 import { instancesRouter } from './src/routes/instances.js';
 import { releasesRouter } from './src/routes/releases.js';
@@ -14,6 +14,8 @@ import { adminRouter } from './src/routes/admin.js';
 import { postsRouter } from './src/routes/posts.js';
 import { statsRouter } from './src/routes/stats.js';
 import { profileRouter } from './src/routes/profile.js';
+import { notificationsRouter } from './src/routes/notifications.js';
+import { pushRouter } from './src/routes/push.js';
 import { initRealtime } from './src/realtime.js';
 
 warnIfMisconfigured();
@@ -33,12 +35,13 @@ app.set('trust proxy', 1);
 // HSTS...) et retire X-Powered-By (qui annonçait "Express" à quiconque
 // inspectait les en-têtes, une information interne inutile à exposer).
 // contentSecurityPolicy: false — DÉSACTIVÉ pour l'instant : la CSP par
-// défaut de helmet bloquerait les scripts inline utilisés dans le <head>
-// de chaque page (pour appliquer le thème sauvegardé avant l'affichage,
-// voir js/theme.js) ainsi que les polices Google Fonts. La activer
-// correctement demanderait de passer ces pages par un moteur de rendu
-// côté serveur (pour générer un nonce différent à chaque requête) —
-// un changement d'architecture plus large que ce correctif.
+// défaut de helmet bloquerait le petit script inline utilisé dans le
+// <head> de chaque page (Cloudinary/nav.js ont besoin d'appeler des
+// domaines externes, et certaines pages exécutent un court script inline
+// avant affichage). L'activer correctement demanderait de passer ces
+// pages par un moteur de rendu côté serveur (pour générer un nonce
+// différent à chaque requête) — un changement d'architecture plus large
+// que ce correctif.
 app.use(helmet({ contentSecurityPolicy: false }));
 
 app.use(express.json());
@@ -85,15 +88,20 @@ app.use('/api', adminRouter);
 app.use('/api', postsRouter);
 app.use('/api', statsRouter);
 app.use('/api', profileRouter);
+app.use('/api', notificationsRouter);
+app.use('/api', pushRouter);
 
-// Publique et volontairement sans authentification : ces deux valeurs ne
-// sont pas des secrets (voir le commentaire sur CLOUDINARY_CLOUD_NAME
-// dans src/config.js) — le navigateur en a besoin pour uploader une photo
-// de profil DIRECTEMENT vers Cloudinary, sans repasser par notre serveur.
+// Publique et volontairement sans authentification : ces valeurs ne sont
+// pas des secrets (voir les commentaires sur CLOUDINARY_CLOUD_NAME et
+// VAPID_PUBLIC_KEY dans src/config.js) — le navigateur en a besoin pour
+// uploader une photo de profil directement vers Cloudinary, et pour
+// s'abonner aux notifications push, dans les deux cas sans jamais passer
+// par une clé secrète côté client.
 app.get('/api/config', (req, res) => {
   res.json({
     cloudinaryCloudName: CLOUDINARY_CLOUD_NAME,
     cloudinaryUploadPreset: CLOUDINARY_UPLOAD_PRESET,
+    vapidPublicKey: VAPID_PUBLIC_KEY,
   });
 });
 

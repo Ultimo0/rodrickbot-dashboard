@@ -42,3 +42,9 @@ export async function updatePost(id, { title, content, category }) {
 export async function deletePost(id) {
   await pool.query('DELETE FROM posts WHERE id = $1', [id]);
 }
+
+/** Utilisé pour les badges de nouveauté (voir src/routes/notifications.js). */
+export async function getLatestTimestamp() {
+  const { rows } = await pool.query('SELECT MAX("createdAt")::bigint AS latest FROM posts');
+  return rows[0].latest || 0;
+}

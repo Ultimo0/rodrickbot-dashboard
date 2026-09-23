@@ -223,4 +223,66 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   window.location.href = 'login.html';
 });
 
+// ---------- Notifications push ----------
+
+const notifToggleBtn = document.getElementById('notifToggleBtn');
+const notifStatusEl = document.getElementById('notifStatus');
+const notifIosHintEl = document.querySelector('.notif-ios-hint');
+
+// Détecte Safari sur iPhone/iPad spécifiquement — pas pour bloquer quoi
+// que ce soit, juste pour afficher l'avertissement "installe d'abord sur
+// l'écran d'accueil" uniquement aux personnes concernées par cette limite
+// d'Apple (voir la discussion avec l'utilisateur : ça ne marche pas
+// autrement sur iOS).
+function isLikelyIos() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+}
+
+// navigator.standalone : true seulement quand le site est ouvert depuis
+// l'icône ajoutée à l'écran d'accueil (pas dans Safari normal) — propre à
+// iOS, absent des autres navigateurs (d'où le "?" défensif ci-dessous).
+function isInstalledStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+async function refreshNotifButton() {
+  if (!window.RodrickPush) return; // push-notifications.js pas chargé (ne devrait pas arriver sur cette page)
+
+  const status = await window.RodrickPush.getStatus();
+
+  if (status === 'unsupported') {
+    notifToggleBtn.disabled = true;
+    notifToggleBtn.textContent = 'Notifications non supportées par ce navigateur';
+    return;
+  }
+  if (status === 'denied') {
+    notifToggleBtn.disabled = true;
+    notifToggleBtn.textContent = 'Notifications bloquées — à réactiver dans les réglages du navigateur';
+    return;
+  }
+
+  notifToggleBtn.disabled = false;
+  notifToggleBtn.textContent = status === 'subscribed' ? 'Désactiver les notifications' : 'Activer les notifications';
+
+  if (isLikelyIos() && !isInstalledStandalone() && status !== 'subscribed') {
+    notifIosHintEl.style.display = 'block';
+  }
+}
+
+notifToggleBtn.addEventListener('click', async () => {
+  notifToggleBtn.disabled = true;
+  showStatus(notifStatusEl, 'Un instant…', 'pending');
+
+  try {
+    await window.RodrickPush.toggle();
+    showStatus(notifStatusEl, 'Préférence enregistrée.', 'success');
+  } catch (err) {
+    showStatus(notifStatusEl, err.message || 'Une erreur est survenue.', 'error');
+  } finally {
+    refreshNotifButton();
+  }
+});
+
+refreshNotifButton();
+
 load();

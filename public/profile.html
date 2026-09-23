@@ -63,6 +63,14 @@
       <div class="profile-row"><span class="profile-label">Email</span><span id="pEmail"></span></div>
       <div class="profile-row"><span class="profile-label">Membre depuis</span><span id="pSince"></span></div>
 
+      <div class="profile-section">
+        <label class="profile-label">Notifications</label>
+        <p class="notif-hint">Sois prévenu(e) dès qu'une nouvelle version ou une nouvelle publication sort — même quand le Hub n'est pas ouvert.</p>
+        <button id="notifToggleBtn" class="notif-toggle-btn" type="button">Activer les notifications</button>
+        <p class="notif-hint notif-ios-hint" style="display:none">Sur iPhone : installe d'abord le Hub sur ton écran d'accueil (partager → "Sur l'écran d'accueil") avant d'activer les notifications — c'est une limite d'Apple, pas du Hub.</p>
+        <div id="notifStatus" class="field-status" style="display:none"></div>
+      </div>
+
       <button id="saveProfileBtn" class="save-btn">Enregistrer les modifications</button>
       <div id="saveStatus" class="field-status" style="display:none"></div>
 
@@ -70,7 +78,9 @@
     </div>
   </div>
 
+  <script src="js/push-notifications.js"></script>
   <script src="js/profile.js"></script>
+  <script src="js/realtime.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/auth-nav.js"></script>
 </body>

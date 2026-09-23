@@ -68,6 +68,20 @@ async function initSchema() {
       "downloadUrl" TEXT
     );
 
+    -- "date" est une date saisie à la main par l'admin (peut être
+    -- antidatée) — pas fiable pour détecter "cette version est nouvelle
+    -- depuis la dernière visite". "createdAt" est l'horodatage RÉEL de
+    -- publication, jamais modifiable, utilisé uniquement pour ça (voir
+    -- src/store/releasesStore.js et src/routes/notifications.js).
+    ALTER TABLE releases ADD COLUMN IF NOT EXISTS "createdAt" BIGINT;
+    -- Rétro-remplissage pour les versions déjà publiées AVANT cette
+    -- colonne : on approxime avec leur champ "date" plutôt que de les
+    -- laisser à NULL (qui les ferait apparaître comme "infiniment
+    -- anciennes", ce qui est le bon comportement ici de toute façon —
+    -- mais autant avoir une vraie valeur cohérente avec le tri par date).
+    UPDATE releases SET "createdAt" = EXTRACT(EPOCH FROM date::date)::bigint * 1000
+      WHERE "createdAt" IS NULL;
+
     CREATE TABLE IF NOT EXISTS commands (
       name          TEXT PRIMARY KEY,
       aliases       TEXT,   -- tableau JS stocké en texte JSON
@@ -143,6 +157,34 @@ async function initSchema() {
     -- rien tant que les tables sont petites.
     CREATE INDEX IF NOT EXISTS heartbeat_log_timestamp_idx ON heartbeat_log ("timestamp");
     CREATE INDEX IF NOT EXISTS posts_author_id_idx ON posts ("authorId");
+
+    -- Une ligne par (compte, section) : à quel moment ce compte a-t-il vu
+    -- pour la dernière fois "versions" ou "communauté" ? Sert à décider
+    -- si le badge de nouveauté doit s'afficher (voir
+    -- src/routes/notifications.js) — stocké côté serveur, et non en
+    -- localStorage, pour que ça suive la personne d'un appareil à
+    -- l'autre, pas seulement sur le navigateur où elle a cliqué.
+    CREATE TABLE IF NOT EXISTS user_seen (
+      "userId"     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      section      TEXT NOT NULL,     -- 'releases' | 'community'
+      "lastSeenAt" BIGINT NOT NULL,
+      PRIMARY KEY ("userId", section)
+    );
+
+    -- Un abonnement par appareil/navigateur (une même personne connectée
+    -- sur son téléphone ET son ordinateur a deux lignes ici, une par
+    -- "endpoint" — chacun doit recevoir la notification séparément).
+    -- endpoint est déjà unique en lui-même (fourni par le navigateur),
+    -- UNIQUE évite d'accumuler des doublons si la même personne active la
+    -- notification plusieurs fois sur le même appareil.
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id          SERIAL PRIMARY KEY,
+      "userId"    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      endpoint    TEXT NOT NULL UNIQUE,
+      p256dh      TEXT NOT NULL,
+      auth        TEXT NOT NULL,
+      "createdAt" BIGINT NOT NULL
+    );
   `);
 }
 

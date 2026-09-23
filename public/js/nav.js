@@ -44,11 +44,86 @@ const PAGES = [
   { href: 'stats.html', label: 'Statistiques', icon: ICONS.chart },
 ];
 
+// Seules ces deux pages ont un "badge de nouveauté" — Dashboard/Commandes/
+// Statistiques n'ont pas de notion de "contenu pas encore vu".
+const NOTIF_SECTIONS = { 'releases.html': 'releases', 'community.html': 'community' };
+const localSeenKey = (section) => `rodrick_hub_seen_${section}`;
+
+// Rempli par computeBadgeState() au chargement, puis tenu à jour par le
+// flux temps réel (voir initRealtimeNotifications) — lu par
+// renderTopNavLinks()/renderBottomTabBar() à chaque (ré)affichage.
+let badgeState = { releases: false, community: false };
+// Renseigné par computeBadgeState() : détermine si markCurrentSectionSeen()
+// prévient aussi le serveur (compte connecté) ou reste uniquement local
+// (visiteur anonyme, voir plus bas).
+let isLoggedIn = false;
+
 function currentPage() {
   // "" (racine du site) doit compter comme index.html — sans ce cas
   // particulier, aucun onglet ne serait jamais marqué actif sur "/".
   const path = location.pathname.split('/').pop();
   return path === '' ? 'index.html' : path;
+}
+
+/**
+ * Compte connecté : /api/notifications/badges compare déjà tout côté
+ * serveur (voir src/routes/notifications.js) — le plus fiable, puisque ça
+ * suit la personne d'un appareil à l'autre. Si cette requête échoue (pas
+ * connecté, ou erreur réseau), on bascule sur une comparaison locale :
+ * dernier horodatage public (/api/notifications/latest) contre ce que ce
+ * navigateur précis a mémorisé lui-même (localStorage) — moins fiable
+ * (ne suit pas d'un appareil à l'autre) mais mieux que rien pour un
+ * visiteur sans compte.
+ */
+async function computeBadgeState() {
+  try {
+    const res = await fetch('/api/notifications/badges');
+    if (res.ok) {
+      isLoggedIn = true;
+      return await res.json();
+    }
+  } catch {
+    // pas de réseau — on retombe sur le calcul local ci-dessous
+  }
+
+  isLoggedIn = false;
+  try {
+    const res = await fetch('/api/notifications/latest');
+    const latest = await res.json();
+    return {
+      releases: latest.releases > Number(localStorage.getItem(localSeenKey('releases')) || 0),
+      community: latest.community > Number(localStorage.getItem(localSeenKey('community')) || 0),
+    };
+  } catch {
+    return { releases: false, community: false };
+  }
+}
+
+/**
+ * Marque la section de la page ACTUELLE comme vue — appelé une fois au
+ * chargement, avant le premier rendu de la nav (voir DOMContentLoaded plus
+ * bas), pour que le badge de cette section n'apparaisse jamais alors
+ * qu'on est justement en train de la regarder.
+ */
+function markCurrentSectionSeen() {
+  const section = NOTIF_SECTIONS[currentPage()];
+  if (!section) return;
+
+  badgeState[section] = false;
+  localStorage.setItem(localSeenKey(section), String(Date.now()));
+
+  if (isLoggedIn) {
+    fetch('/api/notifications/seen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ section }),
+    }).catch(() => {}); // best-effort : une erreur ici ne doit pas bloquer l'affichage de la page
+  }
+}
+
+function badgeDotHtml(href) {
+  const section = NOTIF_SECTIONS[href];
+  return section && badgeState[section] ? '<span class="nav-badge-dot" aria-label="Nouveau contenu"></span>' : '';
 }
 
 function renderTopNavLinks() {
@@ -57,11 +132,17 @@ function renderTopNavLinks() {
 
   const here = currentPage();
   container.innerHTML = PAGES.map(
-    (p) => `<a href="${p.href}"${p.href === here ? ' class="active"' : ''}>${p.label}</a>`
+    (p) => `<a href="${p.href}"${p.href === here ? ' class="active"' : ''}>${p.label}${badgeDotHtml(p.href)}</a>`
   ).join('');
 }
 
 function renderBottomTabBar() {
+  // Idempotent : on retire l'ancienne barre avant d'en recréer une —
+  // sans ça, un second appel (ex: mise à jour d'un badge en temps réel)
+  // en empilerait une deuxième par-dessus la première au lieu de la
+  // remplacer.
+  document.getElementById('hubTabBar')?.remove();
+
   const here = currentPage();
   const tabBar = document.createElement('nav');
   tabBar.className = 'hub-tabbar';
@@ -70,7 +151,10 @@ function renderBottomTabBar() {
 
   tabBar.innerHTML = PAGES.map((p) => `
     <a href="${p.href}"${p.href === here ? ' class="active"' : ''}>
-      <span class="hub-tabbar-icon" aria-hidden="true">${p.icon}</span>
+      <span class="hub-tabbar-icon-wrap">
+        <span class="hub-tabbar-icon" aria-hidden="true">${p.icon}</span>
+        ${badgeDotHtml(p.href)}
+      </span>
       <span class="hub-tabbar-label">${p.label}</span>
     </a>
   `).join('');
@@ -78,10 +162,66 @@ function renderBottomTabBar() {
   document.body.appendChild(tabBar);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+/**
+ * Affiche une bannière temporaire en haut de l'écran — le canal "je suis
+ * en train d'utiliser le Hub là, maintenant" (l'autre canal, pour quand le
+ * Hub n'est pas ouvert, ce sont les notifications push : voir sw.js et
+ * js/push-notifications.js). Clic dessus = aller directement à la page
+ * concernée ; sinon elle disparaît toute seule après quelques secondes.
+ */
+function showToast(message, url) {
+  const toast = document.createElement('div');
+  toast.className = 'hub-toast';
+  toast.textContent = message;
+  toast.addEventListener('click', () => { location.href = url; });
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(() => toast.classList.add('is-visible'));
+
+  setTimeout(() => {
+    toast.classList.remove('is-visible');
+    setTimeout(() => toast.remove(), 300);
+  }, 6000);
+}
+
+/**
+ * Écoute le flux temps réel déjà ouvert par js/realtime.js (voir
+ * l'événement navigateur 'hub-realtime', diffusé sur CHAQUE page qui
+ * inclut ce script — pas seulement community.html comme avant). Une
+ * nouveauté détectée pendant que quelqu'un utilise le Hub allume le badge
+ * immédiatement (sans attendre un rechargement de page) ET affiche une
+ * bannière — SAUF si la personne est déjà en train de regarder la page
+ * concernée (elle voit déjà l'information directement, pas besoin de la
+ * prévenir en plus — community.html gère d'ailleurs déjà son propre
+ * bandeau "nouvelle publication" dans ce cas précis, voir community.js).
+ */
+function initRealtimeNotifications() {
+  const currentSection = NOTIF_SECTIONS[currentPage()];
+  const EVENT_TO_SECTION = { 'new-release': 'releases', 'new-post': 'community' };
+
+  window.addEventListener('hub-realtime', (e) => {
+    const section = EVENT_TO_SECTION[e.detail.type];
+    if (!section || section === currentSection) return;
+
+    badgeState[section] = true;
+    renderTopNavLinks();
+    renderBottomTabBar();
+
+    if (e.detail.type === 'new-release') {
+      showToast(`🚀 Nouvelle version : v${e.detail.release.version}`, 'releases.html');
+    } else {
+      showToast(`💬 Nouvelle publication : "${e.detail.post.title}"`, 'community.html');
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  badgeState = await computeBadgeState();
+  markCurrentSectionSeen();
   renderTopNavLinks();
   renderBottomTabBar();
   initSwipeNavigation();
+  initRealtimeNotifications();
 });
 
 /**

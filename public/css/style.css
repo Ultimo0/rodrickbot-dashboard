@@ -429,6 +429,26 @@ h1 .dim {
     line-height: 1;
   }
 
+  /* Conteneur relatif juste pour l'icône (pas tout le lien) — la pastille
+     se positionne par rapport à LUI, pas par rapport à toute la largeur
+     de l'onglet (sinon elle se retrouverait excentrée au lieu de coller
+     au coin de l'icône). */
+  .hub-tabbar-icon-wrap {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .hub-tabbar-icon-wrap .nav-badge-dot {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    /* La fine bordure de la couleur du fond reprend l'effet "pastille
+       détachée" qu'on voit sur les badges de notification natifs
+       (iOS/Android) — sans elle, la pastille se fondrait dans l'icône
+       juste en dessous quand les deux couleurs sont proches. */
+    border: 2px solid var(--card-solid);
+  }
+
   /* Les icônes utilisent stroke="currentColor" (voir nav.js) : elles
      héritent automatiquement de la couleur du lien parent — aucune règle
      de couleur à écrire ici, le changement d'état actif ci-dessus suffit
@@ -490,6 +510,55 @@ h1 .dim {
 
 .hub-nav a:hover { color: var(--text); }
 .hub-nav a.active { color: var(--sky); border-bottom-color: var(--sky); }
+
+/* Pastille de nouveauté — même élément réutilisé dans la nav du haut
+   (ici, simple pastille à côté du texte) et dans la barre d'onglets
+   mobile (repositionnée en absolu sur l'icône, voir plus bas dans le
+   bloc @media). */
+.nav-badge-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--coral);
+  flex-shrink: 0;
+}
+
+.hub-nav-links a .nav-badge-dot {
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* Bannière temps réel (voir showToast() dans nav.js) — le pendant "je
+   suis en train d'utiliser le Hub" des notifications push (qui, elles,
+   arrivent même quand le Hub n'est pas ouvert). is-visible est ajoutée un
+   instant après l'insertion dans le DOM (voir requestAnimationFrame côté
+   JS) pour que la transition de départ (opacity/transform) soit bien
+   jouée, plutôt que de démarrer déjà dans son état final. */
+.hub-toast {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%) translateY(-16px);
+  max-width: min(90vw, 420px);
+  background: var(--card-solid);
+  border: 1px solid var(--violet);
+  color: var(--text);
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+  z-index: 100;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.hub-toast.is-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
 
 .latest-banner {
   background: var(--card);
@@ -1059,6 +1128,29 @@ h1 .dim {
 
 .save-btn:hover { filter: brightness(1.1); }
 .save-btn:active { transform: scale(0.98); }
+
+.notif-hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  margin: 0 0 10px;
+}
+
+.notif-toggle-btn {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.notif-toggle-btn:hover { border-color: var(--violet); }
+.notif-toggle-btn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .role-badge {
   background: color-mix(in srgb, var(--violet) 12%, transparent);

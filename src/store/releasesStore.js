@@ -6,11 +6,13 @@ export async function loadReleases() {
 }
 
 export async function addRelease(release) {
-  await pool.query(
-    `INSERT INTO releases (version, date, changelog, "downloadUrl")
-     VALUES ($1, $2, $3, $4)`,
-    [release.version, release.date, release.changelog || '', release.downloadUrl || null]
+  const { rows } = await pool.query(
+    `INSERT INTO releases (version, date, changelog, "downloadUrl", "createdAt")
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING *`,
+    [release.version, release.date, release.changelog || '', release.downloadUrl || null, Date.now()]
   );
+  return rows[0];
 }
 
 export async function getReleaseById(id) {
@@ -51,4 +53,10 @@ export async function deleteReleases(ids) {
 export async function getLatestRelease() {
   const releases = await loadReleases();
   return releases[0] || null;
+}
+
+/** Utilisé pour les badges de nouveauté (voir src/routes/notifications.js). */
+export async function getLatestTimestamp() {
+  const { rows } = await pool.query('SELECT MAX("createdAt")::bigint AS latest FROM releases');
+  return rows[0].latest || 0;
 }

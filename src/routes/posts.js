@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/requireAuth.js';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { listPosts, getPost, createPost, updatePost, deletePost } from '../store/postsStore.js';
 import { broadcast } from '../realtime.js';
+import { sendPushToAll } from '../push.js';
 import { ah } from '../utils/asyncHandler.js';
 
 export const postsRouter = Router();
@@ -34,6 +35,12 @@ postsRouter.post('/posts', requireAuth, requireAdmin, ah(async (req, res) => {
 
   const post = await createPost({ title, content, category, authorId: req.session.userId });
   broadcast({ type: 'new-post', post });
+  sendPushToAll({
+    title: 'Nouvelle publication sur Rodrick Hub',
+    body: post.title,
+    url: '/community.html',
+  }).catch((err) => console.error('Échec sendPushToAll (post) :', err));
+
   res.json({ ok: true, post });
 }));
 
