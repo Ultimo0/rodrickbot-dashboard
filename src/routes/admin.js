@@ -10,13 +10,22 @@ export const adminRouter = Router();
 // requireAdmin vérifie ENSUITE que cette session appartient à un admin.
 // S'appliquent dans l'ordre à TOUTES les routes définies plus bas grâce
 // à router.use() — pas besoin de les répéter sur chaque route une par une.
+//
+// IMPORTANT : ce router est monté sur '/api/admin' (voir server.js), PAS
+// sur '/api' comme les autres — sinon ce router.use() sans chemin
+// s'appliquerait à TOUTE requête passant sous /api (donc aussi /api/stats,
+// /api/posts, etc., montés après lui), et bloquerait ces routes pourtant
+// publiques dès qu'un utilisateur non-admin est connecté (requireAdmin
+// répondant 403 avant même que la requête n'atteigne le bon router).
+// Un montage dédié à '/api/admin' garantit que seules les requêtes qui
+// commencent VRAIMENT par /api/admin traversent ce middleware.
 adminRouter.use(requireAuth, requireAdmin);
 
-adminRouter.get('/admin/users', ah(async (req, res) => {
+adminRouter.get('/users', ah(async (req, res) => {
   res.json({ users: await listUsers() });
 }));
 
-adminRouter.patch('/admin/users/:id/role', ah(async (req, res) => {
+adminRouter.patch('/users/:id/role', ah(async (req, res) => {
   const targetId = Number(req.params.id);
   const { role } = req.body || {};
 

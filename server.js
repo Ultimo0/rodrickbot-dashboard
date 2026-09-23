@@ -84,7 +84,12 @@ app.use('/api', instancesRouter);
 app.use('/api', releasesRouter);
 app.use('/api', commandsRouter);
 app.use('/api', authRouter);
-app.use('/api', adminRouter);
+// Monté sur son propre préfixe '/api/admin' (pas '/api' comme les autres
+// routers) — voir le commentaire dans src/routes/admin.js pour la raison :
+// sinon requireAuth/requireAdmin (branchés via router.use() dans ce
+// fichier) intercepteraient AUSSI les requêtes destinées à postsRouter,
+// statsRouter, etc., montés juste après.
+app.use('/api/admin', adminRouter);
 app.use('/api', postsRouter);
 app.use('/api', statsRouter);
 app.use('/api', profileRouter);
