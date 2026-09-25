@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import bcrypt from 'bcryptjs';
 import { requireAuth } from '../middleware/requireAuth.js';
-import { updateProfile } from '../store/usersStore.js';
+import { deleteAccountLimiter } from '../middleware/rateLimit.js';
+import { updateProfile, findUserById, countAdmins, deleteUser } from '../store/usersStore.js';
 import { ah } from '../utils/asyncHandler.js';
 
 export const profileRouter = Router();
@@ -46,5 +48,52 @@ profileRouter.patch('/profile', requireAuth, ah(async (req, res) => {
       avatarUrl: updated.avatarUrl,
       createdAt: updated.createdAt,
     },
+  });
+}));
+
+/**
+ * Suppression du compte, PAR SON PROPRE TITULAIRE — pas de version admin
+ * "supprime le compte de quelqu'un d'autre" pour l'instant (ce n'était
+ * pas la demande ; ça se rajouterait dans admin.js le cas échéant, avec
+ * ses propres règles).
+ *
+ * Exige le mot de passe en confirmation : une session déjà ouverte (sur
+ * un ordinateur partagé, ou volée) ne doit pas suffire à elle seule pour
+ * une action aussi définitive — voir la même logique sur /auth/login.
+ */
+profileRouter.delete('/profile', deleteAccountLimiter, requireAuth, ah(async (req, res) => {
+  const { password } = req.body || {};
+  if (!password) {
+    return res.status(400).json({ error: 'Mot de passe requis pour confirmer la suppression.' });
+  }
+
+  const user = await findUserById(req.session.userId);
+  if (!user) return res.status(404).json({ error: 'Compte introuvable.' });
+
+  const passwordMatches = await bcrypt.compare(password, user.passwordHash);
+  if (!passwordMatches) {
+    return res.status(401).json({ error: 'Mot de passe incorrect.' });
+  }
+
+  // Dernier rempart : si ce compte est le SEUL admin, le supprimer
+  // priverait le Hub de tout accès au panel admin, sans personne pour en
+  // promouvoir un autre à sa place.
+  if (user.role === 'admin') {
+    const adminCount = await countAdmins();
+    if (adminCount <= 1) {
+      return res.status(400).json({
+        error: 'Impossible de supprimer le dernier compte administrateur. Promeus un autre compte admin avant de supprimer le tien.',
+      });
+    }
+  }
+
+  await deleteUser(user.id);
+
+  // req.session.destroy() efface la session CÔTÉ SERVEUR (la ligne dans
+  // la table "session" — voir server.js) ; le cookie qui reste dans le
+  // navigateur ne pointera plus vers rien de valide, exactement comme un
+  // logout normal.
+  req.session.destroy(() => {
+    res.json({ ok: true });
   });
 }));

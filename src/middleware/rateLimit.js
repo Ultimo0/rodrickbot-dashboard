@@ -36,3 +36,15 @@ export const forgotPasswordLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Trop de demandes de réinitialisation. Réessaie dans quelques minutes.' },
 });
+
+// Même profil d'abus que loginLimiter : cette route vérifie un mot de
+// passe (voir DELETE /profile dans src/routes/profile.js), donc quelqu'un
+// qui aurait volé une session pourrait sinon essayer de le deviner en
+// boucle pour supprimer le compte de quelqu'un d'autre.
+export const deleteAccountLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de tentatives. Réessaie dans quelques minutes.' },
+});

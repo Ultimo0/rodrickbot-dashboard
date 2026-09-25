@@ -133,3 +133,45 @@ export async function resetPassword(userId, newPasswordHash) {
     [newPasswordHash, userId]
   );
 }
+
+/**
+ * Utilisé pour bloquer la suppression du DERNIER compte admin restant
+ * (voir deleteUser ci-dessous et src/routes/profile.js) — sans ce garde-
+ * fou, le Hub pourrait se retrouver sans aucun admin, et donc sans
+ * personne pour promouvoir quelqu'un d'autre.
+ */
+export async function countAdmins() {
+  const { rows } = await pool.query("SELECT COUNT(*)::int AS count FROM users WHERE role = 'admin'");
+  return rows[0].count;
+}
+
+/**
+ * Suppression DÉFINITIVE d'un compte, à sa propre demande (voir
+ * src/routes/profile.js — jamais appelée avec l'id de quelqu'un d'autre).
+ *
+ * posts."authorId" est NOT NULL et référence users(id) SANS "ON DELETE
+ * CASCADE" ni "ON DELETE SET NULL" (voir src/db.js) : impossible de
+ * "détacher" une publication de son auteur sans casser cette contrainte,
+ * donc supprimer le compte supprime aussi ses publications avec lui. Une
+ * transaction garantit que les deux suppressions réussissent ensemble, ou
+ * échouent ensemble — jamais un compte supprimé avec ses publications
+ * orphelines encore en base (ce qui ferait planter la moindre lecture du
+ * mur communauté, à cause du INNER JOIN dans postsStore.js).
+ *
+ * user_seen et push_subscriptions ont "ON DELETE CASCADE" (voir
+ * src/db.js) : Postgres les nettoie tout seul, pas besoin de le faire ici.
+ */
+export async function deleteUser(id) {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query('DELETE FROM posts WHERE "authorId" = $1', [id]);
+    await client.query('DELETE FROM users WHERE id = $1', [id]);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}

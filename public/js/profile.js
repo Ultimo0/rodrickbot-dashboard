@@ -223,6 +223,42 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   window.location.href = 'login.html';
 });
 
+// ---------- Suppression du compte ----------
+
+const deletePasswordInputEl = document.getElementById('deletePasswordInput');
+const deleteAccountBtn = document.getElementById('deleteAccountBtn');
+const deleteStatusEl = document.getElementById('deleteStatus');
+
+deleteAccountBtn.addEventListener('click', async () => {
+  const password = deletePasswordInputEl.value;
+  if (!password) {
+    showStatus(deleteStatusEl, 'Entre ton mot de passe pour confirmer.', 'error');
+    return;
+  }
+
+  // confirm() natif — même pattern que les suppressions de version/publication
+  // ailleurs dans le Hub (voir releases.js, admin-posts.js) : une seconde
+  // confirmation explicite avant une action irréversible.
+  if (!confirm('Supprimer définitivement ton compte et tes publications ? Cette action est irréversible.')) return;
+
+  deleteAccountBtn.disabled = true;
+  showStatus(deleteStatusEl, 'Suppression en cours…', 'pending');
+
+  try {
+    const res = await fetch('/api/profile', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Échec de la suppression.');
+
+    window.location.href = 'index.html';
+  } catch (err) {
+    showStatus(deleteStatusEl, err.message || 'Une erreur est survenue.', 'error');
+    deleteAccountBtn.disabled = false;
+  }
+});
+
 // ---------- Notifications push ----------
 
 const notifToggleBtn = document.getElementById('notifToggleBtn');
