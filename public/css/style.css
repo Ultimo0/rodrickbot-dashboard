@@ -1,90 +1,87 @@
 /* =========================================================
-   RodrickBOT — Dashboard
-   Direction : "salle de contrôle" — un poste de supervision
-   pour un essaim de bots. Chaque carte est un signal vivant :
-   la barre gauche "bat" comme un pouls tant que l'instance
-   envoie son heartbeat au serveur.
+   RodrickBOT — Rodrick Hub
+   Direction : "pupitre d'exploitant" — le poste d'un opérateur
+   radio/télémétrie qui surveille une flotte d'émetteurs (chaque
+   instance de RodrickBOT est un signal qu'il faut garder en vue).
+   Plaques mates, liserés cuivrés, témoins ambre pour le statut du
+   pupitre lui-même, piste cyan pour un signal qui passe ("en
+   ligne"), voyant rouge chaud pour une alerte — jamais de verre
+   dépoli ni d'ombre douce generique : chaque surface est une
+   plaque opaque, comme un vrai instrument.
    ========================================================= */
 
 :root {
-  /* Fond — clair par défaut. Pas blanc pur (#fff) : un gris-bleu très
-     clair fatigue moins l'œil et laisse les bordures/ombres se voir. */
-  --bg: #f4f6fb;
-  --bg-mesh:
-    radial-gradient(circle at 12% -10%, #ede9fe66, transparent 42%),
-    radial-gradient(circle at 88% 0%, #cffafe66, transparent 40%),
-    radial-gradient(circle at 50% 100%, #f5f3ff66, transparent 55%);
-  --grid-line: rgba(15, 23, 42, 0.045);
+  /* Fond — plaque claire par défaut : papier kraft/parchemin, pas un
+     gris-bleu SaaS. Les lignes de grille évoquent le papier
+     millimétré d'un oscilloscope plutôt qu'une texture décorative. */
+  --bg: #eae2cd;
+  --grid-line: rgba(59, 43, 15, 0.07);
 
-  /* Surfaces */
-  --card: rgba(255, 255, 255, 0.75);
-  --card-solid: #ffffff;
-  --card-hover: rgba(241, 245, 249, 0.9);
-  --border: rgba(15, 23, 42, 0.1);
-  --border-strong: rgba(15, 23, 42, 0.18);
+  /* Surfaces — plaques OPAQUES (pas de verre dépoli/blur : un
+     instrument a des plaques mates, pas des vitres embuées). */
+  --card: #f8f3e6;
+  --card-solid: #f8f3e6;
+  --card-hover: #f1e9d4;
+  --border: rgba(59, 43, 15, 0.2);
+  --border-strong: rgba(59, 43, 15, 0.36);
 
   /* Texte */
-  --text: #0f172a;
-  --muted: #5b6478;
-  --muted-dim: #8b93a7;
+  --text: #241b0d;
+  --muted: #6d5c3d;
+  --muted-dim: #a3906a;
 
-  /* Accents — plus soutenus que sur fond sombre : les teintes pastel
-     d'origine (pensées pour un fond très sombre) perdraient trop de
-     contraste sur un fond clair. Le sens de chaque couleur reste le même
-     (violet = accent principal, teal = "en ligne/succès", coral =
-     "hors ligne/erreur"), seule l'intensité change. */
-  --violet: #7c3aed;
-  --violet-deep: #5b21b6;
-  --violet-glow: #7c3aed33;
-  --teal: #0d9488;
-  --teal-glow: #0d948833;
-  --coral: #e11d48;
-  --coral-glow: #e11d4833;
-  --amber: #d97706;
-  --amber-glow: #d9770633;
-  --sky: #0284c7;
+  /* Accents — chaque couleur garde son rôle d'origine (violet =
+     accent de marque, teal = "en ligne/succès", coral = "hors
+     ligne/erreur", amber = mise en avant secondaire, sky = lien/info)
+     mais la palette part du pupitre radio : cuivre pour la marque, un
+     cyan de trace d'oscilloscope pour le signal, un rouge de voyant
+     d'alerte plutôt qu'un rose SaaS. */
+  --violet: #a3620f;
+  --violet-deep: #7a480a;
+  --violet-glow: #a3620f33;
+  --teal: #0d7d6e;
+  --teal-glow: #0d7d6e33;
+  --coral: #b3341f;
+  --coral-glow: #b3341f33;
+  --amber: #c2911e;
+  --amber-glow: #c2911e33;
+  --sky: #2c6f90;
 
-  --radius: 16px;
-  --radius-sm: 10px;
+  --radius: 10px;
+  --radius-sm: 6px;
   --font-display: "Space Grotesk", "Segoe UI", sans-serif;
-  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 /* Thème sombre — s'active automatiquement si le téléphone/l'ordinateur
-   est lui-même en mode sombre (aucun bouton, aucun JS : le navigateur
-   réévalue cette media query tout seul si l'utilisateur change de thème
-   système pendant que la page est ouverte). Ce sont les valeurs
-   originales du thème "Classique" du projet. */
+   est lui-même en mode sombre. Le pupitre passe en veille de nuit :
+   plaques café-espresso, témoins ambre/cyan allumés. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #090c16;
-    --bg-mesh:
-      radial-gradient(circle at 12% -10%, #2c1f6a3d, transparent 42%),
-      radial-gradient(circle at 88% 0%, #0a3a4a44, transparent 40%),
-      radial-gradient(circle at 50% 100%, #1a123a3d, transparent 55%);
-    --grid-line: rgba(148, 163, 209, 0.05);
+    --bg: #16110a;
+    --grid-line: rgba(226, 197, 148, 0.06);
 
-    --card: rgba(20, 25, 41, 0.72);
-    --card-solid: #131a2c;
-    --card-hover: rgba(26, 32, 51, 0.85);
-    --border: rgba(148, 163, 209, 0.14);
-    --border-strong: rgba(148, 163, 209, 0.26);
+    --card: #221b10;
+    --card-solid: #221b10;
+    --card-hover: #2c2314;
+    --border: rgba(226, 197, 148, 0.16);
+    --border-strong: rgba(226, 197, 148, 0.3);
 
-    --text: #edf1fc;
-    --muted: #8996b8;
-    --muted-dim: #5d6889;
+    --text: #f4ead9;
+    --muted: #b8a179;
+    --muted-dim: #7c6b4b;
 
-    --violet: #8b7cf6;
-    --violet-deep: #5b4fd1;
-    --violet-glow: #8b7cf655;
-    --teal: #2dd4bf;
-    --teal-glow: #2dd4bf55;
-    --coral: #fb7185;
-    --coral-glow: #fb718555;
-    --amber: #fbbf24;
-    --amber-glow: #fbbf2455;
-    --sky: #38bdf8;
+    --violet: #e8a33d;
+    --violet-deep: #b97a22;
+    --violet-glow: #e8a33d55;
+    --teal: #4fd6c4;
+    --teal-glow: #4fd6c455;
+    --coral: #ee6146;
+    --coral-glow: #ee614655;
+    --amber: #f0c14b;
+    --amber-glow: #f0c14b55;
+    --sky: #6cb6e0;
   }
 }
 
@@ -96,7 +93,6 @@ body {
   background:
     linear-gradient(var(--grid-line) 1px, transparent 1px) 0 0 / 100% 44px,
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) 0 0 / 44px 100%,
-    var(--bg-mesh),
     var(--bg);
   background-attachment: fixed;
   color: var(--text);
@@ -203,7 +199,6 @@ h1 .dim {
   position: relative;
   overflow: hidden;
   background: var(--card);
-  backdrop-filter: blur(10px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px 20px;
@@ -235,7 +230,6 @@ h1 .dim {
 .instance-card {
   position: relative;
   background: var(--card);
-  backdrop-filter: blur(10px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px 20px 20px 24px;
@@ -262,8 +256,6 @@ h1 .dim {
 .instance-card:hover {
   border-color: var(--border-strong);
   background: var(--card-hover);
-  box-shadow: 0 10px 30px #00000066;
-  transform: translateY(-2px);
 }
 .instance-card.disabled-card { opacity: 0.5; }
 
@@ -548,7 +540,7 @@ h1 .dim {
   border-radius: 12px;
   font-size: 0.86rem;
   font-weight: 600;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 12px 28px rgba(36, 27, 15, 0.3);
   z-index: 100;
   opacity: 0;
   cursor: pointer;
@@ -928,17 +920,17 @@ h1 .dim {
   gap: 14px;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 24px;
+  border-radius: var(--radius);
   padding: 32px 28px;
   margin-top: 12px;
 }
 
-/* Champs "pilule" : gros rayon d'arrondi, pas de label visible au-dessus
-   (le texte d'exemple dans le champ fait office de repère — placeholder). */
+/* Champs de saisie sobres, pas de label visible au-dessus (le texte
+   d'exemple dans le champ fait office de repère — placeholder). */
 .auth-form input {
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   padding: 15px 22px;
   color: var(--text);
   font-size: 0.92rem;
@@ -956,7 +948,7 @@ h1 .dim {
   background: var(--violet);
   color: white;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   padding: 13px 32px;
   font-weight: 600;
   font-size: 0.92rem;
