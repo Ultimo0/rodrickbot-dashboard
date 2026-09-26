@@ -657,6 +657,20 @@ h1 .dim {
 
 .release-actions { margin-top: 12px; }
 
+/* Rapports d'erreur (public/errors.html) — même carte que .release-card,
+   avec un bloc monospace dédié pour la stack trace repliée (<details>). */
+.error-stack {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: color-mix(in srgb, var(--border) 30%, transparent);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 8px;
+}
+
 .btn-download {
   display: inline-block;
   background: var(--teal);
