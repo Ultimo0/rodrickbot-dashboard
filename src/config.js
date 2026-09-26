@@ -64,6 +64,13 @@ export const OFFLINE_AFTER_MS = 10 * 60 * 1000;
 // ne jamais couper une fenêtre encore consultée à l'écran.
 export const HEARTBEAT_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
 
+// Durée de conservation des rapports d'erreur (src/db.js,
+// pruneOldErrorReports) — plus courte que HEARTBEAT_RETENTION_MS : un
+// rapport d'erreur n'a de valeur que pour diagnostiquer un problème
+// récent, pas pour une analyse de tendance longue durée comme les
+// heartbeats.
+export const ERROR_REPORT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
 export function warnIfMisconfigured() {
   if (!DATABASE_URL) {
     console.warn(

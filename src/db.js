@@ -185,6 +185,31 @@ async function initSchema() {
       auth        TEXT NOT NULL,
       "createdAt" BIGINT NOT NULL
     );
+
+    -- Rapports d'erreur anonymisés envoyés par RodrickBOT
+    -- (core/telemetry.js::reportError) via POST /api/error-report — voir
+    -- src/routes/errorReports.js et src/store/errorReportsStore.js.
+    -- UNIQUE (instanceId, errorMessage) : une même erreur sur une même
+    -- instance ne crée jamais plus d'une ligne — voir la clause
+    -- ON CONFLICT côté errorReportsStore.js (déduplication).
+    CREATE TABLE IF NOT EXISTS error_reports (
+      id                SERIAL PRIMARY KEY,
+      "instanceId"      TEXT NOT NULL,
+      "botName"         TEXT,
+      "version"         TEXT,
+      "nodeVersion"     TEXT,
+      "errorMessage"    TEXT NOT NULL,
+      "errorStack"      TEXT,
+      "occurrenceCount" INTEGER NOT NULL DEFAULT 1,
+      "firstSeenAt"     BIGINT NOT NULL,
+      "lastSeenAt"      BIGINT NOT NULL,
+      UNIQUE ("instanceId", "errorMessage")
+    );
+
+    -- Sans cet index, la purge (pruneOldErrorReports) et le tri de
+    -- GET /api/error-reports devraient parcourir la table entière — même
+    -- raisonnement que heartbeat_log_timestamp_idx ci-dessus.
+    CREATE INDEX IF NOT EXISTS error_reports_last_seen_idx ON error_reports ("lastSeenAt");
   `);
 }
 
@@ -202,6 +227,20 @@ async function initSchema() {
 export async function pruneOldHeartbeats(retentionMs) {
   const cutoff = Date.now() - retentionMs;
   const { rowCount } = await pool.query('DELETE FROM heartbeat_log WHERE "timestamp" < $1', [cutoff]);
+  return rowCount;
+}
+
+/**
+ * Supprime les rapports d'erreur dont la DERNIÈRE occurrence
+ * ("lastSeenAt") date de plus de retentionMs — une erreur encore active
+ * récemment (même ancienne à l'origine) n'est donc jamais supprimée tant
+ * qu'elle continue de se reproduire. Voir src/config.js pour
+ * ERROR_REPORT_RETENTION_MS (30 jours par défaut) et
+ * src/store/errorReportsStore.js pour le détail du stockage.
+ */
+export async function pruneOldErrorReports(retentionMs) {
+  const cutoff = Date.now() - retentionMs;
+  const { rowCount } = await pool.query('DELETE FROM error_reports WHERE "lastSeenAt" < $1', [cutoff]);
   return rowCount;
 }
 

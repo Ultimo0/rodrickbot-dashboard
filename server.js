@@ -4,9 +4,10 @@ import express from 'express';
 import helmet from 'helmet';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
-import { PORT, PUBLIC_DIR, SESSION_SECRET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, VAPID_PUBLIC_KEY, HEARTBEAT_RETENTION_MS, warnIfMisconfigured } from './src/config.js';
-import { pool, pruneOldHeartbeats } from './src/db.js';
+import { PORT, PUBLIC_DIR, SESSION_SECRET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_UPLOAD_PRESET, VAPID_PUBLIC_KEY, HEARTBEAT_RETENTION_MS, ERROR_REPORT_RETENTION_MS, warnIfMisconfigured } from './src/config.js';
+import { pool, pruneOldHeartbeats, pruneOldErrorReports } from './src/db.js';
 import { instancesRouter } from './src/routes/instances.js';
+import { errorReportsRouter } from './src/routes/errorReports.js';
 import { releasesRouter } from './src/routes/releases.js';
 import { commandsRouter } from './src/routes/commands.js';
 import { authRouter } from './src/routes/auth.js';
@@ -95,6 +96,7 @@ app.use('/api', statsRouter);
 app.use('/api', profileRouter);
 app.use('/api', notificationsRouter);
 app.use('/api', pushRouter);
+app.use('/api', errorReportsRouter);
 
 // Publique et volontairement sans authentification : ces valeurs ne sont
 // pas des secrets (voir les commentaires sur CLOUDINARY_CLOUD_NAME et
@@ -150,3 +152,19 @@ async function runHeartbeatCleanup() {
 
 runHeartbeatCleanup();
 setInterval(runHeartbeatCleanup, 24 * 60 * 60 * 1000);
+
+// Même principe que runHeartbeatCleanup ci-dessus : purge non bloquante,
+// une erreur ici (base momentanément injoignable) ne doit jamais faire
+// planter le serveur — seulement loguée, prochaine tentative au prochain
+// intervalle.
+async function runErrorReportCleanup() {
+  try {
+    const deleted = await pruneOldErrorReports(ERROR_REPORT_RETENTION_MS);
+    if (deleted > 0) console.log(`🧹 ${deleted} rapport(s) d'erreur de plus de 30 jours supprimé(s).`);
+  } catch (err) {
+    console.error('Échec de la purge de error_reports :', err);
+  }
+}
+
+runErrorReportCleanup();
+setInterval(runErrorReportCleanup, 24 * 60 * 60 * 1000);

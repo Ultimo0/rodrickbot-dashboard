@@ -1,4 +1,30 @@
 /**
+ * ⚠️ OBSOLÈTE — CE SCRIPT NE FONCTIONNE PLUS DANS L'ÉTAT ACTUEL DU PROJET.
+ * ------------------------------------------------------------------
+ * Constat (vérifié) : ce script importe `DATA_FILE` et `RELEASES_FILE`
+ * depuis `../src/config.js`. Ces deux constantes n'existent plus dans
+ * `src/config.js` depuis le passage de l'ancien stockage local (JSON puis
+ * SQLite) vers Postgres (voir DEPLOY.md) — l'exécuter provoque une erreur
+ * de chargement de module (export nommé introuvable), avant même
+ * d'atteindre la logique ci-dessous.
+ *
+ * Il n'est plus référencé nulle part : ni dans les scripts de
+ * package.json (seul "start" y est défini), ni dans DEPLOY.md, ni dans
+ * .env.example.
+ *
+ * Conservé tel quel (non supprimé, logique inchangée) à la demande
+ * explicite du propriétaire du projet — ce fichier documente une étape
+ * de migration déjà effectuée (JSON → SQLite), elle-même remplacée
+ * depuis par une seconde migration (SQLite → Postgres) sans que ce
+ * script n'ait été mis à jour à cette occasion. Si une nouvelle
+ * migration de données locales devait un jour être nécessaire, écrire un
+ * nouveau script plutôt que de tenter de réparer celui-ci — son nom
+ * ("json-to-sqlite") ne correspondrait de toute façon plus à la
+ * destination réelle des données (Postgres).
+ * ------------------------------------------------------------------
+ */
+
+/**
  * migrate-json-to-sqlite.js
  * ------------------------------------------------------------------
  * À lancer UNE SEULE FOIS après avoir mis à jour vers la Phase 3, pour ne
