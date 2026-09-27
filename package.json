@@ -1,6 +1,6 @@
 {
   "name": "rodrick-hub",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Rodrick Hub — plateforme centrale de RodrickBOT (dashboard, versions, communauté, comptes...).",
   "type": "module",
   "main": "server.js",

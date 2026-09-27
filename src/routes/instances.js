@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireApiKey } from '../middleware/requireApiKey.js';
 import { loadInstances, saveInstances, logHeartbeat } from '../store/instancesStore.js';
+import { getLatestRelease } from '../store/releasesStore.js';
 import { OFFLINE_AFTER_MS } from '../config.js';
 import { broadcast } from '../realtime.js';
 import { ah } from '../utils/asyncHandler.js';
@@ -43,7 +44,13 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
   await logHeartbeat(instanceId, messageCount);
   broadcast({ type: 'instance-update', instance: instances[instanceId] });
 
-  res.json({ ok: true, enabled: previousEnabled });
+  // Comparaison simple par égalité de chaîne, pas un tri SemVer : on ne
+  // classe jamais les versions entre elles, on détecte juste "la version
+  // publiée la plus récente diffère de celle que ce bot vient d'annoncer".
+  // getLatestRelease() existe déjà (utilisée par le bandeau de
+  // releases.html) — aucune nouvelle table, aucune nouvelle colonne.
+  const latestRelease = await getLatestRelease();
+  res.json({ ok: true, enabled: previousEnabled, latestVersion: latestRelease?.version || null });
 }));
 
 instancesRouter.post('/instances/:instanceId/toggle', requireApiKey, ah(async (req, res) => {

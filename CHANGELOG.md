@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0
+
+### Ajouté
+- **Indicateur de nouvelle version dans la réponse du heartbeat** (Phase 1a
+  de la feuille de route Rodrick Ecosystem) : `POST /api/heartbeat`
+  (`src/routes/instances.js`) renvoie désormais un champ `latestVersion`
+  en plus de `ok`/`enabled`, calculé via `getLatestRelease()`
+  (`src/store/releasesStore.js`, déjà utilisée pour le bandeau de
+  `releases.html` — aucune nouvelle table, aucune nouvelle colonne).
+  RodrickBOT (`core/telemetry.js`, à partir de la version 1.78.0) compare
+  ce champ à sa propre version et prévient une seule fois son propriétaire
+  dans le chat "Vous" quand une nouvelle version est disponible.
+
 ## 0.3.0
 
 ### Ajouté
