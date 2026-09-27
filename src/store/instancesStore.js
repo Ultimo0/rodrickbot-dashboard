@@ -9,6 +9,10 @@ function rowToInstance(row) {
     ...row,
     enabled: Boolean(row.enabled),
     commandStats: row.commandStats ? JSON.parse(row.commandStats) : {},
+    // NULL = jamais tenté depuis le démarrage du bot — distinct de false
+    // (dernière tentative échouée) ou true (réussie), donc pas un simple
+    // Boolean() comme pour "enabled" qui, lui, n'est jamais NULL.
+    ytdlpLastRefreshOk: row.ytdlpLastRefreshOk === null ? null : Boolean(row.ytdlpLastRefreshOk),
   };
 }
 
@@ -39,8 +43,9 @@ export async function saveInstances(instances) {
         `INSERT INTO instances
            ("instanceId", "ownerName", "botName", "version", "uptimeSeconds", "messageCount",
             "commandStats", "mode", "prefix", "nodeVersion", "enabled", "lastSeen",
-            "reconnectCount", "lastDisconnectCode", "lastDisconnectAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+            "reconnectCount", "lastDisconnectCode", "lastDisconnectAt",
+            "ytdlpLastRefreshAt", "ytdlpLastRefreshOk", "ytdlpVersion")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
         [
           inst.instanceId,
           inst.ownerName,
@@ -57,6 +62,11 @@ export async function saveInstances(instances) {
           inst.reconnectCount ?? null,
           inst.lastDisconnectCode ?? null,
           inst.lastDisconnectAt ?? null,
+          inst.ytdlpLastRefreshAt ?? null,
+          inst.ytdlpLastRefreshOk === null || inst.ytdlpLastRefreshOk === undefined
+            ? null
+            : (inst.ytdlpLastRefreshOk ? 1 : 0),
+          inst.ytdlpVersion ?? null,
         ]
       );
     }

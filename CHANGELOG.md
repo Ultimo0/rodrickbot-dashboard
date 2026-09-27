@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.6.0
+
+### Ajouté
+- **État du binaire yt-dlp dans le heartbeat** (Phase 1b-ii de la feuille
+  de route Rodrick Ecosystem) : `POST /api/heartbeat` accepte désormais 3
+  champs optionnels — `ytdlpLastRefreshAt`, `ytdlpLastRefreshOk`,
+  `ytdlpVersion` — envoyés par RodrickBOT (`core/ytdlpStatus.js`, à partir
+  de la version 1.80.0), alimentés à la fois par `boot.mjs` (au démarrage)
+  et par le rafraîchissement périodique (`core/ytdlpAutoUpdater.js`).
+  Nouvelles colonnes sur `instances` (`src/db.js`,
+  `ALTER TABLE ADD COLUMN IF NOT EXISTS`). `ytdlpLastRefreshOk` distingue
+  NULL (jamais tenté) de `false` (dernière tentative échouée) — traité
+  différemment de `enabled` dans `rowToInstance()`
+  (`src/store/instancesStore.js`), qui lui n'est jamais NULL.
+  `saveInstances()` de nouveau étendu (sa liste de colonnes reste figée
+  par construction, voir 0.5.0).
+
 ## 0.5.0
 
 ### Ajouté

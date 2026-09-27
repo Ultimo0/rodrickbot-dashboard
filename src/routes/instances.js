@@ -18,6 +18,7 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
     instanceId, ownerName, botName, version, uptimeSeconds,
     messageCount, commandStats, mode, prefix, nodeVersion,
     reconnectCount, lastDisconnectCode, lastDisconnectAt,
+    ytdlpLastRefreshAt, ytdlpLastRefreshOk, ytdlpVersion,
   } = req.body || {};
 
   if (!instanceId) {
@@ -46,6 +47,11 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
     reconnectCount: reconnectCount ?? null,
     lastDisconnectCode: lastDisconnectCode ?? null,
     lastDisconnectAt: lastDisconnectAt ?? null,
+    // État du binaire yt-dlp (Phase 1b-ii) — mêmes règles : champs
+    // optionnels, NULL si le bot ne les envoie pas encore.
+    ytdlpLastRefreshAt: ytdlpLastRefreshAt ?? null,
+    ytdlpLastRefreshOk: typeof ytdlpLastRefreshOk === 'boolean' ? ytdlpLastRefreshOk : null,
+    ytdlpVersion: ytdlpVersion ?? null,
   };
   await saveInstances(instances);
   await logHeartbeat(instanceId, messageCount);

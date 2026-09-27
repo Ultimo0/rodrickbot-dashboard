@@ -71,6 +71,14 @@ async function initSchema() {
     ALTER TABLE instances ADD COLUMN IF NOT EXISTS "lastDisconnectCode" INTEGER;
     ALTER TABLE instances ADD COLUMN IF NOT EXISTS "lastDisconnectAt" BIGINT;
 
+    -- État du binaire yt-dlp (Phase 1b-ii), envoyé par RodrickBOT via
+    -- core/telemetry.js — voir core/ytdlpStatus.js côté bot.
+    -- "ytdlpLastRefreshOk" en INTEGER 0/1/NULL, même convention que
+    -- "enabled" plus haut (Postgres n'a pas de vrai booléen ici).
+    ALTER TABLE instances ADD COLUMN IF NOT EXISTS "ytdlpLastRefreshAt" BIGINT;
+    ALTER TABLE instances ADD COLUMN IF NOT EXISTS "ytdlpLastRefreshOk" INTEGER;
+    ALTER TABLE instances ADD COLUMN IF NOT EXISTS "ytdlpVersion" TEXT;
+
     CREATE TABLE IF NOT EXISTS releases (
       id            SERIAL PRIMARY KEY,
       version       TEXT NOT NULL,
