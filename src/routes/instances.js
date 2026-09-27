@@ -17,6 +17,7 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
   const {
     instanceId, ownerName, botName, version, uptimeSeconds,
     messageCount, commandStats, mode, prefix, nodeVersion,
+    reconnectCount, lastDisconnectCode, lastDisconnectAt,
   } = req.body || {};
 
   if (!instanceId) {
@@ -39,6 +40,12 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
     nodeVersion: nodeVersion || '?',
     enabled: previousEnabled,
     lastSeen: Date.now(),
+    // Santé de connexion (Phase 1b) — champs optionnels : un bot pas
+    // encore mis à jour ne les envoie simplement pas, ce qui se traduit
+    // par NULL en base (voir db.js), pas par une erreur.
+    reconnectCount: reconnectCount ?? null,
+    lastDisconnectCode: lastDisconnectCode ?? null,
+    lastDisconnectAt: lastDisconnectAt ?? null,
   };
   await saveInstances(instances);
   await logHeartbeat(instanceId, messageCount);

@@ -60,6 +60,17 @@ async function initSchema() {
       "lastSeen"      BIGINT
     );
 
+    -- Santé de connexion WhatsApp (Phase 1b de la feuille de route),
+    -- envoyée par RodrickBOT via core/telemetry.js — voir core/state.js
+    -- (recordDisconnect) et core/client.js pour l'origine de ces valeurs.
+    -- NULL par défaut : une instance qui n'a jamais eu de coupure depuis
+    -- son démarrage (ou un bot pas encore mis à jour vers cette version)
+    -- n'a simplement rien à rapporter, ce n'est pas une valeur manquante
+    -- anormale.
+    ALTER TABLE instances ADD COLUMN IF NOT EXISTS "reconnectCount" INTEGER;
+    ALTER TABLE instances ADD COLUMN IF NOT EXISTS "lastDisconnectCode" INTEGER;
+    ALTER TABLE instances ADD COLUMN IF NOT EXISTS "lastDisconnectAt" BIGINT;
+
     CREATE TABLE IF NOT EXISTS releases (
       id            SERIAL PRIMARY KEY,
       version       TEXT NOT NULL,

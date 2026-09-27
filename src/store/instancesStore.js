@@ -38,8 +38,9 @@ export async function saveInstances(instances) {
       await client.query(
         `INSERT INTO instances
            ("instanceId", "ownerName", "botName", "version", "uptimeSeconds", "messageCount",
-            "commandStats", "mode", "prefix", "nodeVersion", "enabled", "lastSeen")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+            "commandStats", "mode", "prefix", "nodeVersion", "enabled", "lastSeen",
+            "reconnectCount", "lastDisconnectCode", "lastDisconnectAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
         [
           inst.instanceId,
           inst.ownerName,
@@ -53,6 +54,9 @@ export async function saveInstances(instances) {
           inst.nodeVersion,
           inst.enabled ? 1 : 0,
           inst.lastSeen,
+          inst.reconnectCount ?? null,
+          inst.lastDisconnectCode ?? null,
+          inst.lastDisconnectAt ?? null,
         ]
       );
     }

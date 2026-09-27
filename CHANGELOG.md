@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.0
+
+### Ajouté
+- **Santé de connexion WhatsApp dans le heartbeat** (Phase 1b-i de la
+  feuille de route Rodrick Ecosystem) : `POST /api/heartbeat`
+  (`src/routes/instances.js`) accepte désormais 3 champs optionnels —
+  `reconnectCount`, `lastDisconnectCode`, `lastDisconnectAt` — envoyés par
+  RodrickBOT (`core/state.js::recordDisconnect`, à partir de la version
+  1.79.0). Nouvelles colonnes sur `instances` (`src/db.js`,
+  `ALTER TABLE ADD COLUMN IF NOT EXISTS`, NULL par défaut pour les bots pas
+  encore mis à jour). `src/store/instancesStore.js::saveInstances()` a dû
+  être étendu : sa liste de colonnes était figée en dur (`DELETE` +
+  ré-insertion complète à chaque heartbeat) — un champ non ajouté ici
+  aurait été reçu par la route puis silencieusement perdu à l'écriture.
+
 ## 0.4.0
 
 ### Ajouté
