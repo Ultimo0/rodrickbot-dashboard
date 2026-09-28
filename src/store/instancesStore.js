@@ -13,6 +13,8 @@ function rowToInstance(row) {
     // (dernière tentative échouée) ou true (réussie), donc pas un simple
     // Boolean() comme pour "enabled" qui, lui, n'est jamais NULL.
     ytdlpLastRefreshOk: row.ytdlpLastRefreshOk === null ? null : Boolean(row.ytdlpLastRefreshOk),
+    activeFeatures: row.activeFeatures ? JSON.parse(row.activeFeatures) : null,
+    remoteConfig: row.remoteConfig ? JSON.parse(row.remoteConfig) : null,
   };
 }
 
@@ -44,8 +46,10 @@ export async function saveInstances(instances) {
            ("instanceId", "ownerName", "botName", "version", "uptimeSeconds", "messageCount",
             "commandStats", "mode", "prefix", "nodeVersion", "enabled", "lastSeen",
             "reconnectCount", "lastDisconnectCode", "lastDisconnectAt",
-            "ytdlpLastRefreshAt", "ytdlpLastRefreshOk", "ytdlpVersion")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+            "ytdlpLastRefreshAt", "ytdlpLastRefreshOk", "ytdlpVersion",
+            "groupCount", "activeFeatures",
+            "remoteConfig", "configVersion", "appliedConfigVersion")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
         [
           inst.instanceId,
           inst.ownerName,
@@ -67,6 +71,11 @@ export async function saveInstances(instances) {
             ? null
             : (inst.ytdlpLastRefreshOk ? 1 : 0),
           inst.ytdlpVersion ?? null,
+          inst.groupCount ?? null,
+          inst.activeFeatures ? JSON.stringify(inst.activeFeatures) : null,
+          inst.remoteConfig ? JSON.stringify(inst.remoteConfig) : null,
+          inst.configVersion ?? 0,
+          inst.appliedConfigVersion ?? null,
         ]
       );
     }

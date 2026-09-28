@@ -79,6 +79,26 @@ async function initSchema() {
     ALTER TABLE instances ADD COLUMN IF NOT EXISTS "ytdlpLastRefreshOk" INTEGER;
     ALTER TABLE instances ADD COLUMN IF NOT EXISTS "ytdlpVersion" TEXT;
 
+    -- Comptes agrégés d'usage (Phase 1c), envoyés par RodrickBOT via
+    -- core/telemetry.js — voir core/groupSettings.js::getEnabledFeatureCounts
+    -- côté bot. "activeFeatures" est un objet JS stocké en texte JSON,
+    -- même convention que "commandStats" plus haut : uniquement des
+    -- totaux par fonctionnalité (ex: {"antilink":3,"guardian":5}), jamais
+    -- de détail par groupe.
+    ALTER TABLE instances ADD COLUMN IF NOT EXISTS "groupCount" INTEGER;
+    ALTER TABLE instances ADD COLUMN IF NOT EXISTS "activeFeatures" TEXT;
+
+    -- Configuration poussée vers le bot (Phase 1d). "remoteConfig" est la
+    -- configuration SOUHAITÉE (objet JS en texte JSON, ex: {"prefix":"?"}),
+    -- posée depuis le Hub — distincte de "prefix" plus haut, qui est la
+    -- valeur RAPPORTÉE par le bot à chaque heartbeat. "configVersion" est
+    -- incrémenté à chaque nouvelle configuration ; "appliedConfigVersion"
+    -- est la dernière version traitée par le bot (accusé de réception,
+    -- NULL tant qu'un bot pas encore à jour n'en envoie pas).
+    ALTER TABLE instances ADD COLUMN IF NOT EXISTS "remoteConfig" TEXT;
+    ALTER TABLE instances ADD COLUMN IF NOT EXISTS "configVersion" INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE instances ADD COLUMN IF NOT EXISTS "appliedConfigVersion" INTEGER;
+
     CREATE TABLE IF NOT EXISTS releases (
       id            SERIAL PRIMARY KEY,
       version       TEXT NOT NULL,

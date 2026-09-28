@@ -13,12 +13,25 @@ import { ah } from '../utils/asyncHandler.js';
 // (versions, comptes, communauté...).
 export const instancesRouter = Router();
 
+// Configuration pilotable à distance (Phase 1d). MÊMES règles que côté bot
+// (config/index.js::isValidPrefix) — dupliquées ici parce que ce sont deux
+// projets séparés, mais le bot re-valide de toute façon (core/remoteConfig.js)
+// et reste l'autorité : cette copie sert seulement à refuser tôt, avec un
+// message clair, plutôt que de laisser partir une valeur que le bot rejetterait.
+// Pour piloter un nouveau réglage : l'ajouter ici ET dans la liste blanche
+// du bot (core/remoteConfig.js::APPLIERS) — les deux sont nécessaires.
+const MAX_PREFIX_LENGTH = 5;
+const REMOTE_CONFIG_VALIDATORS = {
+  prefix: (v) => typeof v === 'string' && v.length > 0 && v.length <= MAX_PREFIX_LENGTH && !/\s/.test(v),
+};
+
 instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
   const {
     instanceId, ownerName, botName, version, uptimeSeconds,
     messageCount, commandStats, mode, prefix, nodeVersion,
     reconnectCount, lastDisconnectCode, lastDisconnectAt,
     ytdlpLastRefreshAt, ytdlpLastRefreshOk, ytdlpVersion,
+    groupCount, activeFeatures, appliedConfigVersion,
   } = req.body || {};
 
   if (!instanceId) {
@@ -27,6 +40,7 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
 
   const instances = await loadInstances();
   const previousEnabled = instances[instanceId]?.enabled ?? true;
+  const previousInstance = instances[instanceId];
 
   instances[instanceId] = {
     instanceId,
@@ -52,6 +66,25 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
     ytdlpLastRefreshAt: ytdlpLastRefreshAt ?? null,
     ytdlpLastRefreshOk: typeof ytdlpLastRefreshOk === 'boolean' ? ytdlpLastRefreshOk : null,
     ytdlpVersion: ytdlpVersion ?? null,
+    // Comptes agrégés d'usage (Phase 1c) — champs optionnels, NULL si le
+    // bot ne les envoie pas encore. activeFeatures est validé comme objet
+    // simple (pas un tableau, pas une chaîne) avant d'être stocké : même
+    // authentifié par clé API, ce champ finit sérialisé en texte JSON en
+    // base, autant ne jamais y écrire autre chose que la forme attendue.
+    groupCount: Number.isInteger(groupCount) && groupCount >= 0 ? groupCount : null,
+    activeFeatures:
+      activeFeatures && typeof activeFeatures === 'object' && !Array.isArray(activeFeatures)
+        ? activeFeatures
+        : null,
+    // Configuration poussée (Phase 1d). remoteConfig et configVersion sont
+    // posés côté Hub (route /config ci-dessous), JAMAIS par le bot : comme
+    // "enabled", ils doivent être recopiés de l'état précédent, sinon ce
+    // heartbeat — qui reconstruit l'objet de zéro — les effacerait à chaque
+    // fois. appliedConfigVersion, lui, vient du bot (accusé de réception).
+    remoteConfig: previousInstance?.remoteConfig ?? null,
+    configVersion: previousInstance?.configVersion ?? 0,
+    appliedConfigVersion:
+      Number.isInteger(appliedConfigVersion) && appliedConfigVersion >= 0 ? appliedConfigVersion : null,
   };
   await saveInstances(instances);
   await logHeartbeat(instanceId, messageCount);
@@ -63,7 +96,64 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
   // getLatestRelease() existe déjà (utilisée par le bandeau de
   // releases.html) — aucune nouvelle table, aucune nouvelle colonne.
   const latestRelease = await getLatestRelease();
-  res.json({ ok: true, enabled: previousEnabled, latestVersion: latestRelease?.version || null });
+
+  // Configuration en attente : renvoyée tant que le bot n'a pas accusé
+  // réception de cette version (ou d'une plus récente). Un bot pas encore
+  // à jour n'envoie pas appliedConfigVersion (traité comme 0) : il reçoit
+  // la configuration à chaque heartbeat mais l'ignore — sans conséquence.
+  const saved = instances[instanceId];
+  const pendingConfig =
+    saved.remoteConfig && saved.configVersion > (saved.appliedConfigVersion ?? 0)
+      ? { version: saved.configVersion, values: saved.remoteConfig }
+      : undefined;
+
+  res.json({
+    ok: true,
+    enabled: previousEnabled,
+    latestVersion: latestRelease?.version || null,
+    ...(pendingConfig ? { config: pendingConfig } : {}),
+  });
+}));
+
+/**
+ * Pose une configuration à pousser vers une instance (Phase 1d) — appliquée
+ * par le bot au heartbeat suivant (jusqu'à ~5 min), voir
+ * core/remoteConfig.js côté RodrickBOT. Même authentification que /toggle.
+ * Corps : { "prefix": "?" } — clés inconnues REFUSÉES (400) plutôt
+ * qu'ignorées en silence, pour ne pas laisser croire qu'un réglage a été
+ * envoyé alors que le bot l'ignorerait.
+ */
+instancesRouter.post('/instances/:instanceId/config', requireApiKey, ah(async (req, res) => {
+  const { instanceId } = req.params;
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const keys = Object.keys(body);
+
+  if (keys.length === 0) {
+    return res.status(400).json({ error: `Aucun réglage fourni. Réglages autorisés : ${Object.keys(REMOTE_CONFIG_VALIDATORS).join(', ')}.` });
+  }
+
+  for (const key of keys) {
+    const validator = Object.hasOwn(REMOTE_CONFIG_VALIDATORS, key) ? REMOTE_CONFIG_VALIDATORS[key] : null;
+    if (!validator) {
+      return res.status(400).json({ error: `Réglage non autorisé : "${key}". Réglages autorisés : ${Object.keys(REMOTE_CONFIG_VALIDATORS).join(', ')}.` });
+    }
+    if (!validator(body[key])) {
+      return res.status(400).json({ error: `Valeur invalide pour "${key}".` });
+    }
+  }
+
+  const instances = await loadInstances();
+  const instance = instances[instanceId];
+  if (!instance) {
+    return res.status(404).json({ error: 'Instance inconnue.' });
+  }
+
+  instance.remoteConfig = { ...(instance.remoteConfig || {}), ...body };
+  instance.configVersion = (instance.configVersion ?? 0) + 1;
+  await saveInstances(instances);
+  broadcast({ type: 'instance-update', instance });
+
+  res.json({ ok: true, instanceId, configVersion: instance.configVersion, remoteConfig: instance.remoteConfig });
 }));
 
 instancesRouter.post('/instances/:instanceId/toggle', requireApiKey, ah(async (req, res) => {

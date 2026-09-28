@@ -1,5 +1,56 @@
 # Changelog
 
+## 0.8.0
+
+### Ajouté
+- **Configuration poussée vers le bot — préfixe à distance** (Phase 1d-i de
+  la feuille de route Rodrick Ecosystem ; l'interface du dashboard suivra en
+  1d-ii, en attendant la route s'utilise avec `curl`).
+  - Nouvelle route `POST /api/instances/:instanceId/config`
+    (`src/routes/instances.js`), même authentification que `/toggle`
+    (`requireApiKey`). Corps : `{ "prefix": "?" }`. Réglages inconnus
+    refusés en 400 (plutôt qu'ignorés en silence), valeur re-validée
+    (1 à 5 caractères, sans espace — mêmes règles que le bot).
+  - Nouvelles colonnes sur `instances` (`src/db.js`) : `remoteConfig`
+    (configuration souhaitée, JSON), `configVersion` (incrémenté à chaque
+    poussée, 0 par défaut), `appliedConfigVersion` (accusé de réception
+    envoyé par le bot). `remoteConfig` est distinct de `prefix`, qui reste
+    la valeur RAPPORTÉE par le bot.
+  - La réponse de `POST /api/heartbeat` contient un bloc
+    `config: { version, values }` tant que le bot n'a pas accusé réception
+    de cette version.
+  - `remoteConfig` et `configVersion` sont recopiés de l'état précédent à
+    chaque heartbeat (comme `enabled`) : la route heartbeat reconstruit
+    l'objet instance de zéro, sans cette recopie la configuration poussée
+    serait effacée au heartbeat suivant.
+  - `saveInstances()`/`rowToInstance()` étendus (`src/store/instancesStore.js`).
+- **Limite connue** : comme `/toggle`, la route lit puis réécrit toutes les
+  instances (`saveInstances` supprime et réinsère tout). Une poussée arrivant
+  exactement pendant le traitement d'un heartbeat peut être perdue (fenêtre
+  de quelques millisecondes) — vérifier `configVersion` dans la réponse, puis
+  `appliedConfigVersion` via `GET /api/instances`.
+
+## 0.7.0
+
+### Ajouté
+- **Comptes agrégés d'usage dans le heartbeat** (Phase 1c de la feuille de
+  route Rodrick Ecosystem) : `POST /api/heartbeat` accepte désormais 2
+  champs optionnels — `groupCount` (nombre de groupes où le bot est
+  membre) et `activeFeatures` (nombre de groupes où chaque fonctionnalité
+  par groupe est activée : antilink, guardian, antispam...) — envoyés par
+  RodrickBOT (à partir de la version 1.81.0). Uniquement des totaux,
+  jamais un détail par groupe (aucun nom ni JID de groupe). Nouvelles
+  colonnes sur `instances` (`src/db.js`) : `groupCount` INTEGER,
+  `activeFeatures` TEXT (JSON, même convention que `commandStats`).
+  Validation défensive dans `src/routes/instances.js` :
+  `activeFeatures` doit être un objet simple (ni tableau ni chaîne),
+  `groupCount` un entier positif — sinon stocké comme `NULL`.
+  `activeFeatures` vaut `null` (et non `{}` comme `commandStats`) quand
+  absent, pour distinguer "bot pas encore à jour" de "zéro groupe avec
+  cette fonctionnalité activée", deux situations différentes à l'affichage.
+  `saveInstances()` de nouveau étendu (sa liste de colonnes reste figée
+  par construction, voir 0.5.0).
+
 ## 0.6.0
 
 ### Ajouté
