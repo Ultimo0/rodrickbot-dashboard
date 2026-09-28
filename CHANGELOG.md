@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.9.0
+
+### Ajouté
+- **Changer le préfixe d'une copie depuis le dashboard** (Phase 1d-ii —
+  interface de la route `POST /api/instances/:id/config` ajoutée en 0.8.0).
+  - `public/js/app.js` : un bouton ✏️ dans la ligne « Préfixe » de chaque
+    carte ouvre une saisie (`prompt()`), valide (1 à 5 caractères, sans
+    espace — mêmes règles que le bot et la route), puis appelle la route.
+    Une mention « ⏳ En attente : « x » » s'affiche tant que le bot n'a pas
+    appliqué la valeur (`configVersion` > `appliedConfigVersion`).
+  - Bouton désactivé, avec explication au survol, pour une copie dont
+    `appliedConfigVersion` vaut `null` : elle n'a jamais envoyé d'accusé de
+    réception, donc tourne sous RodrickBOT < 1.82.0 et n'appliquerait rien —
+    la mention « en attente » resterait affichée indéfiniment.
+  - `prompt()` plutôt qu'un champ intégré à la carte : `refresh()`
+    reconstruit toute la grille (`grid.innerHTML`) à chaque heartbeat de
+    n'importe quelle instance, un champ de saisie serait vidé en pleine
+    frappe.
+  - `public/css/style.css` : styles `.prefix-btn` et `.config-pending`
+    (variables existantes uniquement, aucune nouvelle couleur).
+
 ## 0.8.0
 
 ### Ajouté

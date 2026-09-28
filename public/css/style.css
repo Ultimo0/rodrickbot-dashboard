@@ -306,6 +306,19 @@ h1 .dim {
 .toggle-btn.is-on { background: color-mix(in srgb, var(--teal) 10%, transparent); color: var(--teal); border-color: color-mix(in srgb, var(--teal) 30%, transparent); }
 .toggle-btn.is-off { background: color-mix(in srgb, var(--coral) 10%, transparent); color: var(--coral); border-color: color-mix(in srgb, var(--coral) 30%, transparent); }
 
+/* Préfixe à distance (Phase 1d-ii) : petit bouton ✏️ dans la ligne "Préfixe"
+   de chaque carte, et mention "en attente" tant que le bot n'a pas appliqué. */
+.prefix-btn {
+  margin-left: 8px; padding: 2px 8px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: transparent; color: var(--muted);
+  font-size: 0.8rem; cursor: pointer; font-family: var(--font-body);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.prefix-btn:hover:not(:disabled) { color: var(--teal); border-color: color-mix(in srgb, var(--teal) 40%, transparent); }
+.prefix-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.prefix-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.config-pending { font-size: 0.75rem; color: var(--amber); padding: 0 0 8px; }
+
 .delete-btn {
   background: color-mix(in srgb, var(--coral) 6%, transparent); color: var(--coral);
   border-color: color-mix(in srgb, var(--coral) 25%, transparent); flex: 0 0 auto; width: 46px;

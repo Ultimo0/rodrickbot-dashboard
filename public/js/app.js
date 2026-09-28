@@ -53,6 +53,25 @@ function topCommandsHtml(commandStats) {
   return `<div class="top-commands"><div class="k">Top commandes</div>${rows}</div>`;
 }
 
+// Mêmes règles que le bot (config/index.js::isValidPrefix) et que la route
+// POST /api/instances/:id/config : 1 à 5 caractères, sans espace. Ici pour
+// refuser tôt avec un message clair — le serveur ET le bot re-valident.
+function isValidPrefix(value) {
+  return typeof value === 'string' && value.length > 0 && value.length <= 5 && !/\s/.test(value);
+}
+
+// Préfixe poussé depuis le Hub mais pas encore appliqué par le bot (le bot
+// l'applique au heartbeat suivant, voir core/remoteConfig.js côté
+// RodrickBOT). null si rien n'est en attente. Une valeur identique au
+// préfixe déjà en place n'est pas "en attente" : rien de visible à attendre.
+function pendingRemotePrefix(inst) {
+  const wanted = inst.remoteConfig?.prefix;
+  if (!wanted) return null;
+  if ((inst.configVersion ?? 0) <= (inst.appliedConfigVersion ?? 0)) return null;
+  if (wanted === inst.prefix) return null;
+  return wanted;
+}
+
 function instanceCardHtml(inst) {
   const enabled = inst.enabled !== false;
   // Le bouton 🗑️ n'apparaît que pour les copies hors ligne : pensé pour
@@ -61,6 +80,15 @@ function instanceCardHtml(inst) {
   const deleteBtn = !inst.online
     ? `<button class="delete-btn" data-id="${escapeHtml(inst.instanceId)}" title="Supprimer définitivement cette instance">🗑️</button>`
     : '';
+
+  // appliedConfigVersion vaut null tant que le bot n'a JAMAIS envoyé cet
+  // accusé de réception : c'est une copie pas encore mise à jour vers une
+  // version qui gère la configuration poussée (RodrickBOT 1.82.0+). Lui
+  // pousser un préfixe resterait "en attente" indéfiniment, donc bouton
+  // désactivé avec l'explication plutôt qu'une promesse trompeuse.
+  const canPushConfig = inst.appliedConfigVersion != null;
+  const prefixBtn = `<button class="prefix-btn" data-id="${escapeHtml(inst.instanceId)}" data-prefix="${escapeHtml(inst.prefix)}" ${canPushConfig ? '' : 'disabled'} title="${canPushConfig ? 'Changer le préfixe à distance' : 'Cette copie doit d\'abord être mise à jour (RodrickBOT 1.82.0 ou plus)'}">✏️</button>`;
+  const pendingPrefix = pendingRemotePrefix(inst);
 
   return `
     <div class="instance-card ${enabled ? '' : 'disabled-card'}">
@@ -73,7 +101,8 @@ function instanceCardHtml(inst) {
       </div>
       <div class="info-row"><span class="k">Bot</span><span>${escapeHtml(inst.botName)} v${escapeHtml(inst.version)}</span></div>
       <div class="info-row"><span class="k">Mode</span><span>${escapeHtml(inst.mode)}</span></div>
-      <div class="info-row"><span class="k">Préfixe</span><span>${escapeHtml(inst.prefix)}</span></div>
+      <div class="info-row"><span class="k">Préfixe</span><span>${escapeHtml(inst.prefix)}${prefixBtn}</span></div>
+      ${pendingPrefix ? `<div class="config-pending">⏳ En attente : « ${escapeHtml(pendingPrefix)} » — appliqué au prochain contact du bot</div>` : ''}
       <div class="info-row"><span class="k">Uptime</span><span>${formatUptime(inst.uptimeSeconds)}</span></div>
       <div class="info-row"><span class="k">Messages traités</span><span>${inst.messageCount ?? '—'}</span></div>
       <div class="info-row"><span class="k">Dernier contact</span><span>${timeAgo(inst.lastSeen)}</span></div>
@@ -121,6 +150,9 @@ async function refresh() {
     document.querySelectorAll('.delete-btn').forEach((btn) => {
       btn.addEventListener('click', () => deleteInstance(btn.dataset.id));
     });
+    document.querySelectorAll('.prefix-btn').forEach((btn) => {
+      btn.addEventListener('click', () => changeRemotePrefix(btn.dataset.id, btn.dataset.prefix));
+    });
   } catch (err) {
     errorEl.textContent = 'Impossible de contacter le serveur.';
     errorEl.style.display = 'block';
@@ -136,6 +168,40 @@ async function toggleInstance(instanceId, enabled) {
       body: JSON.stringify({ enabled }),
     });
     if (!res.ok) { alert('Impossible de changer le statut (clé API invalide ou erreur serveur).'); return; }
+    refresh();
+  } catch { alert('Impossible de contacter le serveur.'); }
+}
+
+// Un prompt() natif plutôt qu'un <input> dans la carte : refresh() reconstruit
+// toute la grille (grid.innerHTML) à CHAQUE heartbeat de n'importe quelle
+// instance — un champ de saisie intégré à la carte serait vidé en pleine
+// frappe. prompt() vit hors du DOM de la grille, et reste cohérent avec les
+// confirm()/alert() déjà utilisés ici.
+async function changeRemotePrefix(instanceId, currentPrefix) {
+  const answer = prompt(
+    `Nouveau préfixe pour "${instanceId}" (actuel : "${currentPrefix}").\n` +
+    `1 à 5 caractères, sans espace.\n\n` +
+    `Il sera appliqué au prochain contact du bot (jusqu'à 5 min, ou à son retour s'il est hors ligne).`,
+    currentPrefix
+  );
+  if (answer === null) return; // annulé
+
+  const prefix = answer.trim();
+  if (!isValidPrefix(prefix)) { alert('Préfixe invalide : 1 à 5 caractères, sans espace.'); return; }
+  if (prefix === currentPrefix) { alert('C\'est déjà le préfixe actuel de cette copie.'); return; }
+
+  const key = apiKey();
+  try {
+    const res = await fetch(`/api/instances/${encodeURIComponent(instanceId)}/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+      body: JSON.stringify({ prefix }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Impossible de changer le préfixe (clé API invalide ou erreur serveur).');
+      return;
+    }
     refresh();
   } catch { alert('Impossible de contacter le serveur.'); }
 }
