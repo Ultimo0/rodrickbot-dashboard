@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.9.1
+
+### Ajouté
+- **Refonte visuelle des pages Connexion et Inscription** (`login.html`,
+  `register.html`) : toujours les mêmes classes `.auth-form`/`.auth-switch`
+  et les mêmes variables de couleur du thème (aucune couleur nouvelle),
+  mais dans l'esprit "pupitre d'exploitant" du reste du Hub plutôt qu'un
+  formulaire nu — liseré cuivré en tête de plaque (même langage que
+  `.stat::before`), halo de signal animé derrière l'icône de marque,
+  légère entrée en fondu de la carte, bouton d'action en dégradé avec
+  lueur au survol (même traitement que le bouton de `#keyBar`). Scopé à la
+  nouvelle classe `.auth-page` (posée sur ces deux pages uniquement) pour
+  ne rien changer sur `forgot-password.html`/`reset-password.html`, qui
+  réutilisent les mêmes classes de base. Respecte
+  `prefers-reduced-motion`.
+- **Bouton "œil" pour afficher/masquer le mot de passe**, sur les deux
+  pages — icône SVG en trait dessinée à la main (même esprit que les
+  icônes de `nav.js`), jamais d'émoticône. Chaque champ (nom, email, mot
+  de passe) a désormais une icône de contexte à gauche ; le champ mot de
+  passe a en plus le bouton bascule à droite (`type="text"`/`"password"`,
+  libellé et `aria-pressed` mis à jour en phase pour les lecteurs
+  d'écran). Logique dupliquée dans `login.js` et `register.js` plutôt que
+  factorisée dans un utilitaire partagé, à l'image de `escapeHtml()` déjà
+  dupliquée entre plusieurs scripts de pages du Hub.
+
 ## 0.9.0
 
 ### Ajouté

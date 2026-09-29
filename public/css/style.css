@@ -191,7 +191,7 @@ h1 .dim {
 #keyBar button:hover { filter: brightness(1.08); box-shadow: 0 8px 26px var(--violet-glow); transform: translateY(-1px); }
 #keyBar button:active { transform: translateY(0); }
 #keyBar button:focus-visible, .toggle-btn:focus-visible, .delete-btn:focus-visible,
-#apiKeyInput:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
+#apiKeyInput:focus-visible, .field-toggle:focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
 
 /* ---------- Summary stats ---------- */
 #summary { display: flex; gap: 14px; margin-bottom: 26px; flex-wrap: wrap; }
@@ -490,7 +490,8 @@ h1 .dim {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .live-pill .dot, .instance-card:has(.badge.online)::before { animation: none; }
+  .live-pill .dot, .instance-card:has(.badge.online)::before,
+  .auth-page .brand-icon::before, .auth-page .auth-form { animation: none; }
 }
 /* =========================================================
    Phase 1 — Gestion des versions
@@ -961,6 +962,7 @@ h1 .dim {
   padding: 15px 22px;
   color: var(--text);
   font-size: 0.92rem;
+  width: 100%;
 }
 
 .auth-form input:focus {
@@ -999,6 +1001,108 @@ h1 .dim {
 
 .auth-switch { text-align: left; margin-top: 18px; padding-left: 4px; font-size: 0.85rem; color: var(--muted); }
 .auth-switch a { color: var(--sky); font-weight: 600; text-decoration: none; }
+
+/* ---------- Pages de connexion/inscription : habillage "pupitre" ----------
+   Scopé à .auth-page (posé sur .page dans login.html/register.html
+   uniquement) pour ne rien changer sur les autres pages qui réutilisent
+   .auth-form (mot de passe oublié, réinitialisation). */
+
+/* Halo de signal derrière l'icône de marque — la métaphore radio du
+   thème (une transmission qui part de l'icône), en pulsation lente pour
+   rester discret plutôt que clignotant. */
+.auth-page .brand-icon { position: relative; }
+.auth-page .brand-icon::before {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--violet-glow), transparent 72%);
+  animation: authSignalPulse 2.6s ease-in-out infinite;
+  z-index: -1;
+}
+@keyframes authSignalPulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.88); }
+  50% { opacity: 1; transform: scale(1.18); }
+}
+
+.auth-page .auth-form {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.35);
+  animation: authCardIn 0.5s ease both;
+}
+
+/* Liseré cuivré en haut de plaque, même langage que .stat::before
+   (barre de couleur en tête de carte) plutôt qu'une bordure générique. */
+.auth-page .auth-form::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--violet), var(--sky));
+}
+
+@keyframes authCardIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Champ = icône + saisie (+ bouton œil pour le mot de passe), dans un
+   même conteneur relatif plutôt que des champs nus : lisible sans
+   labels visibles, et prépare la place pour le bouton de bascule. */
+.auth-page .field { position: relative; display: flex; align-items: center; }
+
+.auth-page .field-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  color: var(--muted-dim);
+  pointer-events: none;
+  transition: color 0.15s ease;
+}
+.auth-page .field-icon svg { width: 18px; height: 18px; }
+
+.auth-page .field:focus-within .field-icon { color: var(--violet); }
+
+.auth-page .field input { padding-left: 46px; }
+.auth-page .field-password input { padding-right: 46px; }
+
+.auth-page .field-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--muted-dim);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.auth-page .field-toggle svg { width: 18px; height: 18px; }
+.auth-page .field-toggle:hover { color: var(--violet); background: var(--card-hover); }
+
+/* Bouton d'action à l'image de #keyBar button : dégradé cuivré + lueur +
+   léger soulèvement au survol, plutôt qu'un aplat plat. */
+.auth-page .auth-form button[type="submit"] {
+  background: linear-gradient(135deg, var(--violet), var(--violet-deep));
+  box-shadow: 0 6px 20px var(--violet-glow);
+  transition: transform 0.12s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+.auth-page .auth-form button[type="submit"]:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 8px 26px var(--violet-glow);
+  transform: translateY(-1px);
+}
+.auth-page .auth-form button[type="submit"]:active { transform: translateY(0); }
 
 .profile-card {
   background: var(--card);
