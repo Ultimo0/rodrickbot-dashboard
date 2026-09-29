@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.9.2
+
+### Ajouté
+- **Affichage de la santé de connexion WhatsApp sur le dashboard**
+  (`public/js/app.js`) : les champs `reconnectCount`/`lastDisconnectCode`/
+  `lastDisconnectAt`, déjà acceptés par `POST /api/heartbeat` et stockés en
+  base depuis une version antérieure (Phase 1b — voir `src/db.js` et
+  `src/routes/instances.js`), n'étaient jamais rendus nulle part dans
+  l'interface alors qu'ils étaient bien reçus et sauvegardés. Nouvelle
+  fonction `connectionHealthHtml()` : ajoute deux lignes ("Reconnexions",
+  "Dernière coupure") à la carte de chaque instance, avec le code de
+  déconnexion traduit en clair via une table de correspondance vers l'énum
+  `DisconnectReason` de `@whiskeysockets/baileys` (401, 403, 408, 411, 428,
+  440, 500, 515 — un code absent de cette liste s'affiche tel quel, jamais
+  masqué). N'affiche rien du tout pour une copie qui tourne encore sous
+  RodrickBOT < 1.79.0 (champs `null`), plutôt qu'une ligne à moitié vide.
+
 ## 0.9.1
 
 ### Ajouté

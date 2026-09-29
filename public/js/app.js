@@ -72,6 +72,39 @@ function pendingRemotePrefix(inst) {
   return wanted;
 }
 
+// Codes de l'énum DisconnectReason de @whiskeysockets/baileys, affichés en
+// clair pour ne pas obliger à connaître le paquet par cœur — un code non
+// listé ici s'affiche simplement tel quel ("code 123"), jamais masqué.
+const DISCONNECT_REASON_LABELS = {
+  401: 'session fermée',
+  403: 'interdit',
+  408: 'connexion perdue',
+  411: 'version multi-appareils incompatible',
+  428: 'connexion fermée',
+  440: 'remplacée par une autre session',
+  500: 'session corrompue',
+  515: 'redémarrage requis',
+};
+
+// Santé de connexion (Phase 1b) — reconnectCount/lastDisconnectAt sont NULL
+// pour une copie pas encore mise à jour (RodrickBOT < 1.79.0, voir
+// core/state.js côté bot) : dans ce cas on n'affiche rien plutôt qu'une
+// ligne à moitié vide.
+function connectionHealthHtml(inst) {
+  if (inst.reconnectCount == null && inst.lastDisconnectAt == null) return '';
+
+  const reason = inst.lastDisconnectCode != null
+    ? (DISCONNECT_REASON_LABELS[inst.lastDisconnectCode] || `code ${inst.lastDisconnectCode}`)
+    : null;
+
+  return `
+    <div class="info-row"><span class="k">Reconnexions</span><span>${inst.reconnectCount ?? '—'}</span></div>
+    ${inst.lastDisconnectAt != null
+      ? `<div class="info-row"><span class="k">Dernière coupure</span><span>${timeAgo(inst.lastDisconnectAt)}${reason ? ` (${escapeHtml(reason)})` : ''}</span></div>`
+      : ''}
+  `;
+}
+
 function instanceCardHtml(inst) {
   const enabled = inst.enabled !== false;
   // Le bouton 🗑️ n'apparaît que pour les copies hors ligne : pensé pour
@@ -106,6 +139,7 @@ function instanceCardHtml(inst) {
       <div class="info-row"><span class="k">Uptime</span><span>${formatUptime(inst.uptimeSeconds)}</span></div>
       <div class="info-row"><span class="k">Messages traités</span><span>${inst.messageCount ?? '—'}</span></div>
       <div class="info-row"><span class="k">Dernier contact</span><span>${timeAgo(inst.lastSeen)}</span></div>
+      ${connectionHealthHtml(inst)}
       ${topCommandsHtml(inst.commandStats)}
       <div class="actions">
         <button class="toggle-btn ${enabled ? 'is-on' : 'is-off'}" data-id="${escapeHtml(inst.instanceId)}" data-enabled="${enabled}">
