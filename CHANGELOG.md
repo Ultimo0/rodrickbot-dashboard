@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.9.3
+
+### Ajouté
+- **Commentaires et réactions sur les publications** (`community.html`,
+  `community.js`) : enrichit le système `posts` déjà existant
+  (annonces/nouveautés/guides) sans toucher à son fonctionnement actuel.
+  - Deux nouvelles tables (`src/db.js`) : `post_comments` (un commentaire =
+    une ligne, cascade à la suppression du post ou de l'auteur) et
+    `post_reactions` (une seule réaction par personne et par post — clé
+    primaire composite `postId`/`userId`, pas de table de comptage séparée
+    à maintenir à la main). Deux nouveaux stores dédiés
+    (`postCommentsStore.js`, `postReactionsStore.js`), même convention
+    qu'un store par domaine déjà en place pour `posts`/`users`.
+  - `postsStore.js` : `SELECT_BASE` récupère maintenant `commentCount`/
+    `reactionCount` via sous-requêtes, affichés directement sur les cartes
+    de la liste (`💬`/`❤️`) sans requête supplémentaire par post.
+  - Nouvelles routes sur `posts.js` : `GET/POST /posts/:id/comments`,
+    `DELETE /posts/:id/comments/:commentId` (réservé à l'auteur du
+    commentaire ou à un admin — modération), `GET/POST
+    /posts/:id/reactions` (bascule : cliquer deux fois le même émoji
+    retire la réaction). Diffusion en temps réel via `broadcast()`
+    (`new-comment`, `delete-comment`, `post-reaction`), déjà utilisé pour
+    `new-post`.
+  - Lecteur de publication (`#reader`) : barre de 6 émojis (👍❤️😂😮😢🙏,
+    liste fermée) avec mise en évidence de sa propre réaction, fil de
+    commentaires avec avatar/nom/date, formulaire de publication pour les
+    personnes connectées et lien de connexion pour les autres (même
+    convention que `/api/auth/me` déjà utilisée par `auth-nav.js`). Se
+    met à jour discrètement via les événements temps réel plutôt qu'un
+    rechargement de toute la liste.
+
 ## 0.9.2
 
 ### Ajouté

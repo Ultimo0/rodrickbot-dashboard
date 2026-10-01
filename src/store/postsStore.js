@@ -3,8 +3,13 @@ import { pool } from '../db.js';
 // La jointure (JOIN) récupère le nom de l'auteur en même temps que le
 // post, en une seule requête — plutôt que de faire une requête séparée
 // "trouve l'auteur du post X" pour chaque post affiché.
+// commentCount/reactionCount sont calculés via des sous-requêtes
+// (plutôt qu'un JOIN + GROUP BY) pour rester simple et éviter les
+// doublons de lignes lorsqu'un post a plusieurs commentaires/réactions.
 const SELECT_BASE = `
-  SELECT posts.*, users.name AS "authorName"
+  SELECT posts.*, users.name AS "authorName",
+    (SELECT COUNT(*)::int FROM post_comments WHERE post_comments."postId" = posts.id) AS "commentCount",
+    (SELECT COUNT(*)::int FROM post_reactions WHERE post_reactions."postId" = posts.id) AS "reactionCount"
   FROM posts
   JOIN users ON users.id = posts."authorId"
 `;

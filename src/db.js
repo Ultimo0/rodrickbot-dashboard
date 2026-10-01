@@ -174,6 +174,41 @@ async function initSchema() {
       "createdAt" BIGINT NOT NULL
     );
 
+    -- Commentaires sur une publication. ON DELETE CASCADE sur "postId" —
+    -- supprimer une publication (admin-posts.js) supprime son fil de
+    -- discussion, pas de ligne orpheline à nettoyer à la main. Même choix
+    -- sur "authorId" que push_subscriptions/user_seen plus bas : supprimer
+    -- un compte supprime aussi ce qu'il a écrit ici (cohérent avec la
+    -- suppression de compte en libre-service de profile.html).
+    CREATE TABLE IF NOT EXISTS post_comments (
+      id          SERIAL PRIMARY KEY,
+      "postId"    INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      "authorId"  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      content     TEXT NOT NULL,
+      "createdAt" BIGINT NOT NULL
+    );
+
+    -- Une réaction par (publication, compte) — cliquer un émoji déjà posé
+    -- le retire, en cliquer un autre le remplace (même principe qu'une
+    -- réaction WhatsApp sur un message, pas Slack/Discord où un même
+    -- compte peut cumuler plusieurs émojis différents sur un même
+    -- message : plus simple à afficher et à raisonner ici). La clé
+    -- primaire composite empêche nativement toute deuxième ligne pour la
+    -- même personne sur la même publication.
+    CREATE TABLE IF NOT EXISTS post_reactions (
+      "postId"    INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+      "userId"    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      emoji       TEXT NOT NULL,
+      "createdAt" BIGINT NOT NULL,
+      PRIMARY KEY ("postId", "userId")
+    );
+
+    -- Sans ces deux index, chaque ouverture du fil d'une publication ou
+    -- calcul de compteur (postsStore.js::SELECT_BASE) devrait parcourir
+    -- TOUTE la table — même raisonnement que posts_author_id_idx plus bas.
+    CREATE INDEX IF NOT EXISTS post_comments_post_id_idx ON post_comments ("postId");
+    CREATE INDEX IF NOT EXISTS post_reactions_post_id_idx ON post_reactions ("postId");
+
     -- Contrairement à "instances" (qui ne garde que le DERNIER heartbeat de
     -- chaque instance, écrasé à chaque fois), cette table ajoute une ligne
     -- à CHAQUE heartbeat reçu — un vrai historique, nécessaire pour tracer

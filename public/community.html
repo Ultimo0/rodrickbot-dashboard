@@ -40,6 +40,21 @@
       <h2 id="readerTitle"></h2>
       <div class="reader-meta" id="readerMeta"></div>
       <div class="reader-content" id="readerContent"></div>
+
+      <div class="reactions-bar" id="reactionsBar"></div>
+
+      <div class="comments-section">
+        <h3 class="comments-title">Commentaires <span id="commentsCount"></span></h3>
+        <div id="commentsError" class="form-error"></div>
+        <form id="commentForm" class="comment-form" style="display:none">
+          <textarea id="commentInput" class="comment-input" placeholder="Écrire un commentaire…" maxlength="500" rows="2"></textarea>
+          <button type="submit" class="comment-submit">Publier</button>
+        </form>
+        <div id="commentLoginHint" class="comment-login-hint" style="display:none">
+          <a href="login.html">Connectez-vous</a> pour commenter et réagir.
+        </div>
+        <div id="commentsList" class="comments-list"></div>
+      </div>
     </div>
   </div>
 
