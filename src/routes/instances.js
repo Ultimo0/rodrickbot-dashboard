@@ -1,6 +1,13 @@
 import { Router } from 'express';
 import { requireApiKey } from '../middleware/requireApiKey.js';
-import { loadInstances, saveInstances, logHeartbeat } from '../store/instancesStore.js';
+import {
+  loadInstances,
+  upsertHeartbeat,
+  updateInstanceConfig,
+  updateInstanceEnabled,
+  deleteInstance,
+  logHeartbeat,
+} from '../store/instancesStore.js';
 import { getLatestRelease } from '../store/releasesStore.js';
 import { OFFLINE_AFTER_MS } from '../config.js';
 import { broadcast } from '../realtime.js';
@@ -38,11 +45,7 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
     return res.status(400).json({ error: 'instanceId manquant.' });
   }
 
-  const instances = await loadInstances();
-  const previousEnabled = instances[instanceId]?.enabled ?? true;
-  const previousInstance = instances[instanceId];
-
-  instances[instanceId] = {
+  const instance = {
     instanceId,
     ownerName: ownerName || 'Inconnu',
     botName: botName || 'RodrickBOT',
@@ -53,7 +56,6 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
     mode: mode || '?',
     prefix: prefix || '!',
     nodeVersion: nodeVersion || '?',
-    enabled: previousEnabled,
     lastSeen: Date.now(),
     // Santé de connexion (Phase 1b) — champs optionnels : un bot pas
     // encore mis à jour ne les envoie simplement pas, ce qui se traduit
@@ -76,19 +78,15 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
       activeFeatures && typeof activeFeatures === 'object' && !Array.isArray(activeFeatures)
         ? activeFeatures
         : null,
-    // Configuration poussée (Phase 1d). remoteConfig et configVersion sont
-    // posés côté Hub (route /config ci-dessous), JAMAIS par le bot : comme
-    // "enabled", ils doivent être recopiés de l'état précédent, sinon ce
-    // heartbeat — qui reconstruit l'objet de zéro — les effacerait à chaque
-    // fois. appliedConfigVersion, lui, vient du bot (accusé de réception).
-    remoteConfig: previousInstance?.remoteConfig ?? null,
-    configVersion: previousInstance?.configVersion ?? 0,
+    // Configuration poussée (Phase 1d) et état activé/désactivé : ces
+    // colonnes appartiennent au Hub et ne sont pas modifiées par l'UPSERT
+    // du heartbeat. appliedConfigVersion vient du bot (accusé de réception).
     appliedConfigVersion:
       Number.isInteger(appliedConfigVersion) && appliedConfigVersion >= 0 ? appliedConfigVersion : null,
   };
-  await saveInstances(instances);
+  const saved = await upsertHeartbeat(instance);
   await logHeartbeat(instanceId, messageCount);
-  broadcast({ type: 'instance-update', instance: instances[instanceId] });
+  broadcast({ type: 'instance-update', instance: saved });
 
   // Comparaison simple par égalité de chaîne, pas un tri SemVer : on ne
   // classe jamais les versions entre elles, on détecte juste "la version
@@ -101,7 +99,6 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
   // réception de cette version (ou d'une plus récente). Un bot pas encore
   // à jour n'envoie pas appliedConfigVersion (traité comme 0) : il reçoit
   // la configuration à chaque heartbeat mais l'ignore — sans conséquence.
-  const saved = instances[instanceId];
   const pendingConfig =
     saved.remoteConfig && saved.configVersion > (saved.appliedConfigVersion ?? 0)
       ? { version: saved.configVersion, values: saved.remoteConfig }
@@ -109,7 +106,7 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
 
   res.json({
     ok: true,
-    enabled: previousEnabled,
+    enabled: saved.enabled,
     latestVersion: latestRelease?.version || null,
     ...(pendingConfig ? { config: pendingConfig } : {}),
   });
@@ -142,15 +139,11 @@ instancesRouter.post('/instances/:instanceId/config', requireApiKey, ah(async (r
     }
   }
 
-  const instances = await loadInstances();
-  const instance = instances[instanceId];
+  const instance = await updateInstanceConfig(instanceId, body);
   if (!instance) {
     return res.status(404).json({ error: 'Instance inconnue.' });
   }
 
-  instance.remoteConfig = { ...(instance.remoteConfig || {}), ...body };
-  instance.configVersion = (instance.configVersion ?? 0) + 1;
-  await saveInstances(instances);
   broadcast({ type: 'instance-update', instance });
 
   res.json({ ok: true, instanceId, configVersion: instance.configVersion, remoteConfig: instance.remoteConfig });
@@ -164,14 +157,12 @@ instancesRouter.post('/instances/:instanceId/toggle', requireApiKey, ah(async (r
     return res.status(400).json({ error: '"enabled" doit être un booléen.' });
   }
 
-  const instances = await loadInstances();
-  if (!instances[instanceId]) {
+  const instance = await updateInstanceEnabled(instanceId, enabled);
+  if (!instance) {
     return res.status(404).json({ error: 'Instance inconnue.' });
   }
 
-  instances[instanceId].enabled = enabled;
-  await saveInstances(instances);
-  broadcast({ type: 'instance-update', instance: instances[instanceId] });
+  broadcast({ type: 'instance-update', instance });
 
   res.json({ ok: true, instanceId, enabled });
 }));
@@ -183,13 +174,7 @@ instancesRouter.post('/instances/:instanceId/toggle', requireApiKey, ah(async (r
 instancesRouter.delete('/instances/:instanceId', requireApiKey, ah(async (req, res) => {
   const { instanceId } = req.params;
 
-  const instances = await loadInstances();
-  if (!instances[instanceId]) {
-    return res.status(404).json({ error: 'Instance inconnue.' });
-  }
-
-  delete instances[instanceId];
-  await saveInstances(instances);
+  if (!(await deleteInstance(instanceId))) return res.status(404).json({ error: 'Instance inconnue.' });
   broadcast({ type: 'instance-deleted', instanceId });
 
   res.json({ ok: true, instanceId, deleted: true });

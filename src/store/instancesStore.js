@@ -26,72 +26,105 @@ export async function loadInstances() {
   return instances;
 }
 
-/**
- * Remplace TOUT le contenu de la table par l'objet donné — même logique
- * que l'ancien writeFileSync() qui réécrivait tout le fichier JSON d'un
- * coup. On utilise un client dédié (plutôt que le pool directement) pour
- * que BEGIN/COMMIT/ROLLBACK s'appliquent tous à la MÊME connexion — avec
- * le pool, chaque requête pourrait sinon partir sur une connexion
- * différente, ce qui casserait la transaction.
- */
-export async function saveInstances(instances) {
+/** Enregistre les seuls champs provenant du bot, sans écraser les champs Hub. */
+export async function upsertHeartbeat(inst) {
+  const { rows } = await pool.query(
+    `INSERT INTO instances
+       ("instanceId", "ownerName", "botName", "version", "uptimeSeconds", "messageCount",
+        "commandStats", "mode", "prefix", "nodeVersion", "lastSeen",
+        "reconnectCount", "lastDisconnectCode", "lastDisconnectAt",
+        "ytdlpLastRefreshAt", "ytdlpLastRefreshOk", "ytdlpVersion",
+        "groupCount", "activeFeatures", "appliedConfigVersion")
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+     ON CONFLICT ("instanceId") DO UPDATE SET
+       "ownerName" = EXCLUDED."ownerName",
+       "botName" = EXCLUDED."botName",
+       "version" = EXCLUDED."version",
+       "uptimeSeconds" = EXCLUDED."uptimeSeconds",
+       "messageCount" = EXCLUDED."messageCount",
+       "commandStats" = EXCLUDED."commandStats",
+       "mode" = EXCLUDED."mode",
+       "prefix" = EXCLUDED."prefix",
+       "nodeVersion" = EXCLUDED."nodeVersion",
+       "lastSeen" = EXCLUDED."lastSeen",
+       "reconnectCount" = EXCLUDED."reconnectCount",
+       "lastDisconnectCode" = EXCLUDED."lastDisconnectCode",
+       "lastDisconnectAt" = EXCLUDED."lastDisconnectAt",
+       "ytdlpLastRefreshAt" = EXCLUDED."ytdlpLastRefreshAt",
+       "ytdlpLastRefreshOk" = EXCLUDED."ytdlpLastRefreshOk",
+       "ytdlpVersion" = EXCLUDED."ytdlpVersion",
+       "groupCount" = EXCLUDED."groupCount",
+       "activeFeatures" = EXCLUDED."activeFeatures",
+       "appliedConfigVersion" = EXCLUDED."appliedConfigVersion"
+     RETURNING *`,
+    [
+      inst.instanceId, inst.ownerName, inst.botName, inst.version,
+      inst.uptimeSeconds, inst.messageCount, JSON.stringify(inst.commandStats || {}),
+      inst.mode, inst.prefix, inst.nodeVersion, inst.lastSeen,
+      inst.reconnectCount, inst.lastDisconnectCode, inst.lastDisconnectAt,
+      inst.ytdlpLastRefreshAt,
+      inst.ytdlpLastRefreshOk === null || inst.ytdlpLastRefreshOk === undefined
+        ? null
+        : (inst.ytdlpLastRefreshOk ? 1 : 0),
+      inst.ytdlpVersion, inst.groupCount,
+      inst.activeFeatures ? JSON.stringify(inst.activeFeatures) : null,
+      inst.appliedConfigVersion,
+    ]
+  );
+  return rowToInstance(rows[0]);
+}
+
+export async function updateInstanceConfig(instanceId, values) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    await client.query('DELETE FROM instances');
-
-    for (const inst of Object.values(instances)) {
-      await client.query(
-        `INSERT INTO instances
-           ("instanceId", "ownerName", "botName", "version", "uptimeSeconds", "messageCount",
-            "commandStats", "mode", "prefix", "nodeVersion", "enabled", "lastSeen",
-            "reconnectCount", "lastDisconnectCode", "lastDisconnectAt",
-            "ytdlpLastRefreshAt", "ytdlpLastRefreshOk", "ytdlpVersion",
-            "groupCount", "activeFeatures",
-            "remoteConfig", "configVersion", "appliedConfigVersion")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
-        [
-          inst.instanceId,
-          inst.ownerName,
-          inst.botName,
-          inst.version,
-          inst.uptimeSeconds,
-          inst.messageCount,
-          JSON.stringify(inst.commandStats || {}),
-          inst.mode,
-          inst.prefix,
-          inst.nodeVersion,
-          inst.enabled ? 1 : 0,
-          inst.lastSeen,
-          inst.reconnectCount ?? null,
-          inst.lastDisconnectCode ?? null,
-          inst.lastDisconnectAt ?? null,
-          inst.ytdlpLastRefreshAt ?? null,
-          inst.ytdlpLastRefreshOk === null || inst.ytdlpLastRefreshOk === undefined
-            ? null
-            : (inst.ytdlpLastRefreshOk ? 1 : 0),
-          inst.ytdlpVersion ?? null,
-          inst.groupCount ?? null,
-          inst.activeFeatures ? JSON.stringify(inst.activeFeatures) : null,
-          inst.remoteConfig ? JSON.stringify(inst.remoteConfig) : null,
-          inst.configVersion ?? 0,
-          inst.appliedConfigVersion ?? null,
-        ]
-      );
+    const { rows: currentRows } = await client.query(
+      'SELECT "remoteConfig", "configVersion" FROM instances WHERE "instanceId" = $1 FOR UPDATE',
+      [instanceId]
+    );
+    if (!currentRows[0]) {
+      await client.query('ROLLBACK');
+      return null;
     }
 
+    const currentConfig = currentRows[0].remoteConfig ? JSON.parse(currentRows[0].remoteConfig) : {};
+    const mergedConfig = { ...currentConfig, ...values };
+    const { rows } = await client.query(
+      `UPDATE instances
+       SET "remoteConfig" = $1, "configVersion" = "configVersion" + 1
+       WHERE "instanceId" = $2
+       RETURNING *`,
+      [JSON.stringify(mergedConfig), instanceId]
+    );
+
     await client.query('COMMIT');
+    return rowToInstance(rows[0]);
   } catch (err) {
-    await client.query('ROLLBACK');
+    await client.query('ROLLBACK').catch(() => {});
     throw err;
   } finally {
     client.release();
   }
 }
 
+export async function updateInstanceEnabled(instanceId, enabled) {
+  const { rows } = await pool.query(
+    'UPDATE instances SET "enabled" = $1 WHERE "instanceId" = $2 RETURNING *',
+    [enabled ? 1 : 0, instanceId]
+  );
+  return rows[0] ? rowToInstance(rows[0]) : null;
+}
+
+export async function deleteInstance(instanceId) {
+  const { rows } = await pool.query(
+    'DELETE FROM instances WHERE "instanceId" = $1 RETURNING "instanceId"',
+    [instanceId]
+  );
+  return rows.length > 0;
+}
+
 /**
- * Contrairement à saveInstances() (qui écrase le dernier snapshot connu),
- * ceci AJOUTE une ligne à chaque appel — c'est cet historique qui permet
+ * Ceci AJOUTE une ligne à chaque appel — c'est cet historique qui permet
  * de tracer une vraie courbe d'activité dans le temps (voir statsStore.js),
  * plutôt qu'une simple photo de l'instant présent.
  */

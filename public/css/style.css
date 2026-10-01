@@ -1586,6 +1586,22 @@ h1 .dim {
 
 .comments-list { display: flex; flex-direction: column; gap: 14px; }
 
+.comments-load-older {
+  display: block;
+  margin: 0 auto 14px;
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--sky);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.comments-load-older:hover { border-color: var(--sky); }
+.comments-load-older:disabled { opacity: 0.6; cursor: wait; }
+
 .comments-empty { color: var(--muted); font-size: 0.85rem; }
 
 .comment { display: flex; gap: 10px; align-items: flex-start; }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.4
+
+### Correctifs
+- **Création du premier compte admin sérialisée** : deux inscriptions simultanées ne peuvent plus toutes deux recevoir le rôle administrateur ; les collisions d'email renvoient une réponse `409`.
+- **Écritures d'instances ciblées et atomiques** : les heartbeats n'écrasent plus les configurations ou activations concurrentes du dashboard, et les changements de configuration fusionnent sous verrou de ligne.
+- **Réactions sérialisées par utilisateur et publication** : les clics simultanés respectent le comportement de bascule et ne provoquent plus de conflit de clé primaire.
+- **Fil de commentaires borné** : chargement paginé par lots de 50 et limitation des nouvelles publications (10 commentaires/10 minutes, 60 réactions/minute).
+
 ## 0.9.3
 
 ### Ajouté

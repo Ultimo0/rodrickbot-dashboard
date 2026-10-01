@@ -45,7 +45,15 @@ authRouter.post('/auth/register', registerLimiter, ah(async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(password, BCRYPT_COST);
-  const user = await createUser(email, passwordHash, name);
+  let user;
+  try {
+    user = await createUser(email, passwordHash, name);
+  } catch (err) {
+    // The pre-check above is for a friendly response; the unique constraint
+    // remains the authority when two registrations use the same email.
+    if (err.code === '23505') return res.status(409).json({ error: 'Un compte existe déjà avec cet email.' });
+    throw err;
+  }
 
   req.session.userId = user.id;
 

@@ -8,6 +8,7 @@ import { findUserById } from '../store/usersStore.js';
 import { broadcast } from '../realtime.js';
 import { sendPushToAll } from '../push.js';
 import { ah } from '../utils/asyncHandler.js';
+import { commentLimiter, reactionLimiter } from '../middleware/rateLimit.js';
 
 export const postsRouter = Router();
 
@@ -80,10 +81,19 @@ postsRouter.get('/posts/:id/comments', ah(async (req, res) => {
   const postId = Number(req.params.id);
   if (!(await getPost(postId))) return res.status(404).json({ error: 'Publication introuvable.' });
 
-  res.json({ comments: await listComments(postId) });
+  const limitValue = Number(req.query.limit ?? 50);
+  const beforeId = req.query.before === undefined ? null : Number(req.query.before);
+  if (
+    !Number.isInteger(limitValue) || limitValue < 1 ||
+    (beforeId !== null && (!Number.isInteger(beforeId) || beforeId < 1))
+  ) {
+    return res.status(400).json({ error: 'Paramètres de pagination invalides.' });
+  }
+  const result = await listComments(postId, { limit: Math.min(limitValue, 50), beforeId });
+  res.json(result);
 }));
 
-postsRouter.post('/posts/:id/comments', requireAuth, ah(async (req, res) => {
+postsRouter.post('/posts/:id/comments', requireAuth, commentLimiter, ah(async (req, res) => {
   const postId = Number(req.params.id);
   if (!(await getPost(postId))) return res.status(404).json({ error: 'Publication introuvable.' });
 
@@ -128,7 +138,7 @@ postsRouter.get('/posts/:id/reactions', ah(async (req, res) => {
   res.json(await getReactionsSummary(postId, req.session.userId || null));
 }));
 
-postsRouter.post('/posts/:id/reactions', requireAuth, ah(async (req, res) => {
+postsRouter.post('/posts/:id/reactions', requireAuth, reactionLimiter, ah(async (req, res) => {
   const postId = Number(req.params.id);
   if (!(await getPost(postId))) return res.status(404).json({ error: 'Publication introuvable.' });
 

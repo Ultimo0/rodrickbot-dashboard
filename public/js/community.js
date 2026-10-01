@@ -15,6 +15,8 @@ let allPosts = [];
 let activeCategory = 'Toutes';
 let currentUser = null;
 let openPostId = null;
+let commentsCursor = null;
+let loadingOlderComments = false;
 
 const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
@@ -181,27 +183,50 @@ function commentHtml(comment) {
 async function loadComments(postId) {
   const listEl = document.getElementById('commentsList');
   const countEl = document.getElementById('commentsCount');
+  const olderButton = document.getElementById('loadOlderComments');
   try {
-    const res = await fetch(`/api/posts/${postId}/comments`);
+    const res = await fetch(`/api/posts/${postId}/comments?limit=50`);
     if (!res.ok) return;
-    const { comments } = await res.json();
+    const { comments, totalCount, hasMore, nextCursor } = await res.json();
     if (openPostId !== postId) return;
 
-    countEl.textContent = comments.length ? `(${comments.length})` : '';
+    commentsCursor = nextCursor;
+    countEl.textContent = totalCount ? `(${totalCount})` : '';
+    olderButton.style.display = hasMore ? 'block' : 'none';
     listEl.innerHTML = comments.length
       ? comments.map(commentHtml).join('')
       : '<div class="comments-empty">Aucun commentaire pour le moment.</div>';
-
-    listEl.querySelectorAll('.comment-delete').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const commentId = Number(btn.closest('.comment').dataset.id);
-        removeComment(postId, commentId);
-      });
-    });
   } catch {
     // Un fil de commentaires qui ne charge pas ne doit pas casser le reste du lecteur.
   }
 }
+
+async function loadOlderComments() {
+  if (!openPostId || !commentsCursor || loadingOlderComments) return;
+  loadingOlderComments = true;
+  const postId = openPostId;
+  const button = document.getElementById('loadOlderComments');
+  button.disabled = true;
+  try {
+    const res = await fetch(`/api/posts/${postId}/comments?limit=50&before=${commentsCursor}`);
+    if (!res.ok) return;
+    const { comments, hasMore, nextCursor } = await res.json();
+    if (openPostId !== postId) return;
+    const listEl = document.getElementById('commentsList');
+    if (comments.length) {
+      listEl.insertAdjacentHTML('afterbegin', comments.map(commentHtml).join(''));
+      commentsCursor = nextCursor;
+    }
+    button.style.display = hasMore ? 'block' : 'none';
+  } catch {
+    // L'utilisateur peut réessayer.
+  } finally {
+    loadingOlderComments = false;
+    button.disabled = false;
+  }
+}
+
+document.getElementById('loadOlderComments').addEventListener('click', loadOlderComments);
 
 async function removeComment(postId, commentId) {
   if (!confirm('Supprimer ce commentaire ?')) return;
@@ -212,6 +237,13 @@ async function removeComment(postId, commentId) {
     // Ignoré : l'utilisateur peut réessayer.
   }
 }
+
+document.getElementById('commentsList').addEventListener('click', (event) => {
+  const button = event.target.closest('.comment-delete');
+  if (!button || !openPostId) return;
+  const commentId = Number(button.closest('.comment').dataset.id);
+  removeComment(openPostId, commentId);
+});
 
 document.getElementById('commentForm').addEventListener('submit', async (e) => {
   e.preventDefault();

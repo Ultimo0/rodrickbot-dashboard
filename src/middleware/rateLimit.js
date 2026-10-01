@@ -48,3 +48,19 @@ export const deleteAccountLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Trop de tentatives. Réessaie dans quelques minutes.' },
 });
+
+export const commentLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de commentaires publiés. Réessaie dans quelques minutes.' },
+});
+
+export const reactionLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de réactions envoyées. Réessaie dans une minute.' },
+});

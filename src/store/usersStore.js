@@ -23,19 +23,31 @@ function normalizeEmail(email) {
  */
 export async function createUser(email, passwordHash, name) {
   const normalizedEmail = normalizeEmail(email);
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Serialize first-account creation. Without this transaction-scoped lock,
+    // two simultaneous registrations can both observe an empty table and
+    // both receive the initial admin role.
+    await client.query('SELECT pg_advisory_xact_lock(791923, 1)');
+    const { rows: countRows } = await client.query('SELECT COUNT(*)::int AS count FROM users');
+    const role = countRows[0].count === 0 ? 'admin' : 'user';
 
-  const { rows: countRows } = await pool.query('SELECT COUNT(*)::int AS count FROM users');
-  const isFirstUser = countRows[0].count === 0;
-  const role = isFirstUser ? 'admin' : 'user';
+    const { rows } = await client.query(
+      `INSERT INTO users (email, "passwordHash", role, "createdAt", name)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id`,
+      [normalizedEmail, passwordHash, role, Date.now(), name]
+    );
+    await client.query('COMMIT');
 
-  const { rows } = await pool.query(
-    `INSERT INTO users (email, "passwordHash", role, "createdAt", name)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id`,
-    [normalizedEmail, passwordHash, role, Date.now(), name]
-  );
-
-  return { id: rows[0].id, email: normalizedEmail, role, name };
+    return { id: rows[0].id, email: normalizedEmail, role, name };
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function findUserByEmail(email) {
