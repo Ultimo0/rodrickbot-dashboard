@@ -28,16 +28,28 @@
     </nav>
 
     <div class="search-bar">
-      <input id="searchInput" type="text" placeholder="Rechercher une commande..." />
+      <div class="command-search-row">
+        <label class="command-search">
+          <span class="sr-only">Rechercher par commande, alias, usage ou description</span>
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input id="searchInput" type="search" placeholder="Rechercher une commande ou un usage…" autocomplete="off" />
+        </label>
+        <button id="clearSearch" class="clear-search" type="button" hidden>Effacer</button>
+      </div>
+      <div class="command-list-meta">
+        <span id="commandCount" class="result-count" aria-live="polite"></span>
+        <span class="muted-small">Ajoutez vos commandes utiles aux favoris avec ☆</span>
+      </div>
       <div id="categoryPills" class="category-pills"></div>
     </div>
 
-    <div id="error"></div>
+    <div id="error" role="alert"></div>
+    <div id="commandFeedback" class="action-feedback" role="status" aria-live="polite" hidden></div>
     <div id="commandsList" class="commands-list"></div>
-    <div id="empty" style="display:none">Aucune commande ne correspond à ta recherche.</div>
+    <div id="empty" class="empty-filter" role="status" hidden>Aucune commande ne correspond à ta recherche.</div>
   </div>
 
-  <script src="js/commands.js"></script>
+  <script type="module" src="js/commands.js"></script>
   <script src="js/realtime.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/auth-nav.js"></script>

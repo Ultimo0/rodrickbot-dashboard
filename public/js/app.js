@@ -1,15 +1,37 @@
+import { filterInstances } from './ui-utils.js';
+
 const STORAGE_KEY = 'rodrick_hub_api_key';
 const input = document.getElementById('apiKeyInput');
 const grid = document.getElementById('grid');
 const summary = document.getElementById('summary');
 const emptyEl = document.getElementById('empty');
+const noResultsEl = document.getElementById('noResults');
 const errorEl = document.getElementById('error');
+const feedbackEl = document.getElementById('actionFeedback');
+const toolbar = document.getElementById('instanceToolbar');
+const searchInput = document.getElementById('instanceSearch');
+const filterBar = document.getElementById('instanceFilters');
+const resultCountEl = document.getElementById('instanceResultCount');
+
+let allInstances = [];
+let activeFilter = 'all';
+let feedbackTimer;
 
 input.value = localStorage.getItem(STORAGE_KEY) || '';
 
 document.getElementById('saveKeyBtn').addEventListener('click', () => {
-  localStorage.setItem(STORAGE_KEY, input.value.trim());
-  refresh();
+  const key = input.value.trim();
+  if (!key) {
+    input.focus();
+    showFeedback('Saisis la clé API du dashboard pour charger tes instances.', true);
+    return;
+  }
+  localStorage.setItem(STORAGE_KEY, key);
+  showFeedback('Connexion en cours…');
+  refresh(true);
+});
+input.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') document.getElementById('saveKeyBtn').click();
 });
 
 function apiKey() {
@@ -29,11 +51,20 @@ function formatUptime(seconds) {
 }
 
 function timeAgo(ts) {
-  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (ts == null || !Number.isFinite(Number(ts))) return 'inconnu';
+  const diff = Math.max(0, Math.floor((Date.now() - Number(ts)) / 1000));
   if (diff < 60) return `il y a ${diff}s`;
   if (diff < 3600) return `il y a ${Math.floor(diff / 60)}min`;
   if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`;
   return `il y a ${Math.floor(diff / 86400)}j`;
+}
+
+function showFeedback(message, isError = false) {
+  clearTimeout(feedbackTimer);
+  feedbackEl.textContent = message;
+  feedbackEl.classList.toggle('is-error', isError);
+  feedbackEl.hidden = false;
+  feedbackTimer = setTimeout(() => { feedbackEl.hidden = true; }, 4500);
 }
 
 function escapeHtml(str) {
@@ -107,11 +138,12 @@ function connectionHealthHtml(inst) {
 
 function instanceCardHtml(inst) {
   const enabled = inst.enabled !== false;
+  const online = inst.online === true;
   // Le bouton 🗑️ n'apparaît que pour les copies hors ligne : pensé pour
   // nettoyer le dashboard des instances mortes en permanence, pas pour
   // supprimer une copie active par erreur.
-  const deleteBtn = !inst.online
-    ? `<button class="delete-btn" data-id="${escapeHtml(inst.instanceId)}" title="Supprimer définitivement cette instance">🗑️</button>`
+  const deleteBtn = !online
+    ? `<button class="delete-btn" type="button" data-id="${escapeHtml(inst.instanceId)}" aria-label="Supprimer l’instance ${escapeHtml(inst.instanceId)}" title="Supprimer définitivement cette instance">🗑️</button>`
     : '';
 
   // appliedConfigVersion vaut null tant que le bot n'a JAMAIS envoyé cet
@@ -120,17 +152,20 @@ function instanceCardHtml(inst) {
   // pousser un préfixe resterait "en attente" indéfiniment, donc bouton
   // désactivé avec l'explication plutôt qu'une promesse trompeuse.
   const canPushConfig = inst.appliedConfigVersion != null;
-  const prefixBtn = `<button class="prefix-btn" data-id="${escapeHtml(inst.instanceId)}" data-prefix="${escapeHtml(inst.prefix)}" ${canPushConfig ? '' : 'disabled'} title="${canPushConfig ? 'Changer le préfixe à distance' : 'Cette copie doit d\'abord être mise à jour (RodrickBOT 1.82.0 ou plus)'}">✏️</button>`;
+  const prefixBtn = `<button class="prefix-btn" type="button" aria-label="Changer le préfixe de ${escapeHtml(inst.instanceId)}" data-id="${escapeHtml(inst.instanceId)}" data-prefix="${escapeHtml(inst.prefix)}" ${canPushConfig ? '' : 'disabled'} title="${canPushConfig ? 'Changer le préfixe à distance' : 'Cette copie doit d\'abord être mise à jour (RodrickBOT 1.82.0 ou plus)'}">✏️</button>`;
   const pendingPrefix = pendingRemotePrefix(inst);
 
   return `
-    <div class="instance-card ${enabled ? '' : 'disabled-card'}">
+    <article class="instance-card ${enabled ? '' : 'disabled-card'}">
       <div class="top">
         <div>
           <div class="owner">${escapeHtml(inst.ownerName)}</div>
           <div class="instance-id">${escapeHtml(inst.instanceId)}</div>
         </div>
-        <div class="badge ${inst.online ? 'online' : 'offline'}">${inst.online ? '🟢 En ligne' : '🔴 Hors ligne'}</div>
+        <div class="instance-status">
+          <span class="badge ${online ? 'online' : 'offline'}"><span class="status-dot" aria-hidden="true"></span>${online ? 'En ligne' : 'Hors ligne'}</span>
+          ${enabled ? '' : '<span class="badge disabled-badge">Désactivée</span>'}
+        </div>
       </div>
       <div class="info-row"><span class="k">Bot</span><span>${escapeHtml(inst.botName)} v${escapeHtml(inst.version)}</span></div>
       <div class="info-row"><span class="k">Mode</span><span>${escapeHtml(inst.mode)}</span></div>
@@ -142,18 +177,52 @@ function instanceCardHtml(inst) {
       ${connectionHealthHtml(inst)}
       ${topCommandsHtml(inst.commandStats)}
       <div class="actions">
-        <button class="toggle-btn ${enabled ? 'is-on' : 'is-off'}" data-id="${escapeHtml(inst.instanceId)}" data-enabled="${enabled}">
-          ${enabled ? '🟢 Activée — cliquer pour désactiver' : '🔴 Désactivée — cliquer pour réactiver'}
+        <button class="toggle-btn ${enabled ? 'is-on' : 'is-off'}" type="button" data-id="${escapeHtml(inst.instanceId)}" data-enabled="${enabled}">
+          ${enabled ? 'Désactiver cette instance' : 'Réactiver cette instance'}
         </button>
         ${deleteBtn}
       </div>
-    </div>
+    </article>
   `;
 }
 
-async function refresh() {
+function renderSummary() {
+  const onlineCount = allInstances.filter((instance) => instance.online === true).length;
+  const disabledCount = allInstances.filter((instance) => instance.enabled === false).length;
+  const offlineCount = allInstances.length - onlineCount;
+
+  summary.innerHTML = `
+    <div class="stat" data-tone="total"><div class="value">${allInstances.length}</div><div class="label">Instances</div></div>
+    <div class="stat" data-tone="online"><div class="value">${onlineCount}</div><div class="label">En ligne</div></div>
+    <div class="stat" data-tone="offline"><div class="value">${offlineCount}</div><div class="label">Hors ligne</div></div>
+    <div class="stat" data-tone="disabled"><div class="value">${disabledCount}</div><div class="label">Désactivées</div></div>
+  `;
+}
+
+function updateFilterButtons() {
+  filterBar.querySelectorAll('[data-filter]').forEach((button) => {
+    const active = button.dataset.filter === activeFilter;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+}
+
+function renderInstances() {
+  const visible = filterInstances(allInstances, {
+    query: searchInput.value,
+    status: activeFilter,
+  });
+
+  resultCountEl.textContent = `${visible.length} sur ${allInstances.length} instance${allInstances.length === 1 ? '' : 's'}`;
+  emptyEl.hidden = allInstances.length > 0;
+  noResultsEl.hidden = allInstances.length === 0 || visible.length > 0;
+  grid.innerHTML = visible.map(instanceCardHtml).join('');
+}
+
+async function refresh(showSuccess = false) {
   const key = apiKey();
   errorEl.style.display = 'none';
+  errorEl.textContent = '';
 
   try {
     const res = await fetch('/api/instances', { headers: { 'x-api-key': key } });
@@ -163,54 +232,59 @@ async function refresh() {
       errorEl.style.display = 'block';
       grid.innerHTML = '';
       summary.innerHTML = '';
+      toolbar.hidden = true;
+      emptyEl.hidden = true;
+      noResultsEl.hidden = true;
+      showFeedback(errorEl.textContent, true);
       return;
     }
 
     const { instances } = await res.json();
-    const onlineCount = instances.filter((i) => i.online).length;
-
-    summary.innerHTML = `
-      <div class="stat"><div class="value">${instances.length}</div><div class="label">Copies totales</div></div>
-      <div class="stat"><div class="value">${onlineCount}</div><div class="label">En ligne</div></div>
-      <div class="stat"><div class="value">${instances.length - onlineCount}</div><div class="label">Hors ligne</div></div>
-    `;
-
-    emptyEl.style.display = instances.length ? 'none' : 'block';
-    grid.innerHTML = instances.map(instanceCardHtml).join('');
-
-    document.querySelectorAll('.toggle-btn').forEach((btn) => {
-      btn.addEventListener('click', () => toggleInstance(btn.dataset.id, btn.dataset.enabled !== 'true'));
-    });
-    document.querySelectorAll('.delete-btn').forEach((btn) => {
-      btn.addEventListener('click', () => deleteInstance(btn.dataset.id));
-    });
-    document.querySelectorAll('.prefix-btn').forEach((btn) => {
-      btn.addEventListener('click', () => changeRemotePrefix(btn.dataset.id, btn.dataset.prefix));
-    });
+    allInstances = Array.isArray(instances) ? instances : [];
+    toolbar.hidden = false;
+    renderSummary();
+    renderInstances();
+    if (showSuccess) showFeedback('Connexion réussie : tes instances sont chargées.');
   } catch (err) {
     errorEl.textContent = 'Impossible de contacter le serveur.';
     errorEl.style.display = 'block';
+    showFeedback('La connexion au dashboard a échoué. Vérifie le réseau et la clé API.', true);
   }
 }
 
-async function toggleInstance(instanceId, enabled) {
+async function toggleInstance(instanceId, enabled, button) {
   const key = apiKey();
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Mise à jour…';
   try {
     const res = await fetch(`/api/instances/${encodeURIComponent(instanceId)}/toggle`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key },
       body: JSON.stringify({ enabled }),
     });
-    if (!res.ok) { alert('Impossible de changer le statut (clé API invalide ou erreur serveur).'); return; }
-    refresh();
-  } catch { alert('Impossible de contacter le serveur.'); }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      showFeedback(data.error || 'Impossible de changer le statut. Vérifie la clé API.', true);
+      return;
+    }
+    showFeedback(enabled ? 'Instance réactivée.' : 'Instance désactivée.');
+    await refresh();
+  } catch {
+    showFeedback('Impossible de contacter le serveur pour modifier cette instance.', true);
+  } finally {
+    if (button.isConnected) {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
 }
 
 // Un prompt() natif plutôt qu'un <input> dans la carte : refresh() reconstruit
 // toute la grille (grid.innerHTML) à CHAQUE heartbeat de n'importe quelle
 // instance — un champ de saisie intégré à la carte serait vidé en pleine
 // frappe. prompt() vit hors du DOM de la grille, et reste cohérent avec les
-// confirm()/alert() déjà utilisés ici.
+// confirm() déjà utilisé ici.
 async function changeRemotePrefix(instanceId, currentPrefix) {
   const answer = prompt(
     `Nouveau préfixe pour "${instanceId}" (actuel : "${currentPrefix}").\n` +
@@ -221,8 +295,8 @@ async function changeRemotePrefix(instanceId, currentPrefix) {
   if (answer === null) return; // annulé
 
   const prefix = answer.trim();
-  if (!isValidPrefix(prefix)) { alert('Préfixe invalide : 1 à 5 caractères, sans espace.'); return; }
-  if (prefix === currentPrefix) { alert('C\'est déjà le préfixe actuel de cette copie.'); return; }
+  if (!isValidPrefix(prefix)) { showFeedback('Préfixe invalide : 1 à 5 caractères, sans espace.', true); return; }
+  if (prefix === currentPrefix) { showFeedback('C’est déjà le préfixe actuel de cette copie.'); return; }
 
   const key = apiKey();
   try {
@@ -233,11 +307,12 @@ async function changeRemotePrefix(instanceId, currentPrefix) {
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Impossible de changer le préfixe (clé API invalide ou erreur serveur).');
+      showFeedback(data.error || 'Impossible de changer le préfixe. Vérifie la clé API.', true);
       return;
     }
-    refresh();
-  } catch { alert('Impossible de contacter le serveur.'); }
+    showFeedback(`Préfixe « ${prefix} » envoyé. Il sera appliqué au prochain contact du bot.`);
+    await refresh();
+  } catch { showFeedback('Impossible de contacter le serveur pour changer le préfixe.', true); }
 }
 
 async function deleteInstance(instanceId) {
@@ -252,10 +327,37 @@ async function deleteInstance(instanceId) {
       method: 'DELETE',
       headers: { 'x-api-key': key },
     });
-    if (!res.ok) { alert('Impossible de supprimer cette instance (clé API invalide ou erreur serveur).'); return; }
-    refresh();
-  } catch { alert('Impossible de contacter le serveur.'); }
+    if (!res.ok) { showFeedback('Impossible de supprimer cette instance. Vérifie la clé API.', true); return; }
+    showFeedback('Instance supprimée du tableau de bord.');
+    await refresh();
+  } catch { showFeedback('Impossible de contacter le serveur pour supprimer cette instance.', true); }
 }
+
+searchInput.addEventListener('input', renderInstances);
+filterBar.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-filter]');
+  if (!button) return;
+  activeFilter = button.dataset.filter;
+  updateFilterButtons();
+  renderInstances();
+});
+
+grid.addEventListener('click', (event) => {
+  const toggleButton = event.target.closest('.toggle-btn');
+  if (toggleButton) {
+    toggleInstance(toggleButton.dataset.id, toggleButton.dataset.enabled !== 'true', toggleButton);
+    return;
+  }
+
+  const deleteButton = event.target.closest('.delete-btn');
+  if (deleteButton) {
+    deleteInstance(deleteButton.dataset.id);
+    return;
+  }
+
+  const prefixButton = event.target.closest('.prefix-btn');
+  if (prefixButton) changeRemotePrefix(prefixButton.dataset.id, prefixButton.dataset.prefix);
+});
 
 refresh();
 

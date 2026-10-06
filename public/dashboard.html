@@ -28,19 +28,43 @@
       <span id="authStatus" class="auth-status"></span>
     </nav>
 
+    <p class="keybar-help">Entre la clé API du dashboard pour connecter tes instances. Elle est conservée dans ce navigateur.</p>
     <div id="keyBar">
-      <input id="apiKeyInput" type="password" placeholder="Clé API du dashboard" />
-      <button id="saveKeyBtn">Connexion</button>
+      <label class="sr-only" for="apiKeyInput">Clé API du dashboard</label>
+      <input id="apiKeyInput" type="password" placeholder="Clé API du dashboard" autocomplete="current-password" />
+      <button id="saveKeyBtn" type="button">Connexion</button>
     </div>
 
-    <div id="error"></div>
+    <div id="error" role="alert"></div>
+    <div id="actionFeedback" class="action-feedback" role="status" aria-live="polite" hidden></div>
 
-    <div id="summary"></div>
+    <div id="summary" aria-label="Résumé des instances"></div>
+    <section id="instanceToolbar" class="dashboard-toolbar" aria-label="Recherche et filtres des instances" hidden>
+      <div class="dashboard-toolbar-heading">
+        <div>
+          <h2>Vos instances</h2>
+          <p>Recherchez une copie ou filtrez selon son état.</p>
+        </div>
+        <span id="instanceResultCount" class="result-count" aria-live="polite"></span>
+      </div>
+      <label class="instance-search">
+        <span class="sr-only">Rechercher par identifiant, propriétaire ou nom du bot</span>
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input id="instanceSearch" type="search" placeholder="Rechercher une instance…" autocomplete="off" />
+      </label>
+      <div id="instanceFilters" class="filter-pills" role="group" aria-label="Filtrer les instances">
+        <button type="button" class="filter-pill active" data-filter="all" aria-pressed="true">Toutes</button>
+        <button type="button" class="filter-pill" data-filter="online" aria-pressed="false">En ligne</button>
+        <button type="button" class="filter-pill" data-filter="offline" aria-pressed="false">Hors ligne</button>
+        <button type="button" class="filter-pill" data-filter="disabled" aria-pressed="false">Désactivées</button>
+      </div>
+    </section>
     <div class="grid" id="grid"></div>
-    <div id="empty" style="display:none">Aucune instance n'a encore envoyé de rapport.</div>
+    <div id="empty" role="status" hidden>Aucune instance n'a encore envoyé de rapport.</div>
+    <div id="noResults" class="empty-filter" role="status" hidden>Aucune instance ne correspond à cette recherche.</div>
   </div>
 
-  <script src="js/app.js"></script>
+  <script type="module" src="js/app.js"></script>
   <script src="js/realtime.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/auth-nav.js"></script>

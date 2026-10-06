@@ -1,6 +1,6 @@
 {
   "name": "rodrick-hub",
-  "version": "0.9.5",
+  "version": "0.9.7",
   "description": "Rodrick Hub — plateforme centrale de RodrickBOT (dashboard, versions, communauté, comptes...).",
   "type": "module",
   "main": "server.js",
@@ -8,7 +8,8 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node test/ui-utils.test.js"
   },
   "dependencies": {
     "pg": "^8.13.0",

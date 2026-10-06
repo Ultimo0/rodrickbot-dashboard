@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.9.7
+
+### Interface
+- **Tableau des instances clarifié** : indicateurs lisibles, recherche par identifiant/propriétaire/bot, filtres par état et messages de résultat adaptés.
+- **Catalogue des commandes enrichi** : favoris mémorisés sur l’appareil, recherche accentuée et préfixée tolérante, compteur de résultats et copie directe de l’usage.
+- **Retours d’action visibles** après la connexion au dashboard, le changement de configuration, l’activation ou la suppression d’une instance.
+- **Vérifications automatisées ajoutées** pour les filtres du dashboard/catalogue et le formatage des usages.
+
+## 0.9.6
+
+### Sécurité
+- **Dépendances corrigées** : mise à jour d’Express et de ses dépendances transitives `proxy-addr` et `qs` vers des versions corrigées des vulnérabilités signalées par `npm audit`.
+- **Verrouillage des dépendances synchronisé** avec `package.json`, notamment pour `express-rate-limit`, `helmet` et `web-push` déjà déclarés par le projet.
+- **Audit npm sans vulnérabilité connue** après mise à jour.
+
 ## 0.9.5
 
 ### Présentation
