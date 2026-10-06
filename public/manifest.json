@@ -1,7 +1,7 @@
 {
   "name": "Rodrick Hub",
   "short_name": "Rodrick Hub",
-  "description": "Suivi centralisé des copies distribuées de RodrickBOT.",
+  "description": "Suivez les instances, les commandes, les versions et la communauté RodrickBOT dans un espace central.",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#eae2cd",

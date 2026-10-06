@@ -1,47 +1,139 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="theme-color" content="#eae2cd" media="(prefers-color-scheme: light)" />
-<meta name="theme-color" content="#16110a" media="(prefers-color-scheme: dark)" />
-<link rel="manifest" href="manifest.json" />
-<link rel="apple-touch-icon" href="icons/icon-192.png" />
-<title>Rodrick Hub</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#eae2cd" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#16110a" media="(prefers-color-scheme: dark)" />
+  <meta name="description" content="Rodrick Hub centralise le suivi des bots, les commandes, les versions et la communauté RodrickBOT." />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <title>Rodrick Hub — Tout RodrickBOT au même endroit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
-  <div class="page">
-    <header class="page-header">
-      <div>
-        <h1><span class="brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="7" width="14" height="12" rx="3"/><line x1="12" y1="7" x2="12" y2="4"/><circle cx="12" cy="3" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="13" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1.3" fill="currentColor" stroke="none"/><line x1="9" y1="16.5" x2="15" y2="16.5"/></svg></span>Rodrick Hub</h1>
-        <div class="subtitle">Suivi centralisé des copies distribuées de RodrickBOT.</div>
-      </div>
-      <div id="liveStatus" class="live-status">🔴 Connexion...</div>
+<body class="landing-body">
+  <div class="page landing-page">
+    <header class="landing-header">
+      <a class="landing-brand" href="index.html" aria-label="Rodrick Hub, accueil">
+        <span class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="7" width="14" height="12" rx="3"/><line x1="12" y1="7" x2="12" y2="4"/><circle cx="12" cy="3" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="13" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1.3" fill="currentColor" stroke="none"/><line x1="9" y1="16.5" x2="15" y2="16.5"/></svg>
+        </span>
+        <span>Rodrick<span class="landing-brand-accent">Hub</span></span>
+      </a>
+      <nav class="hub-nav landing-nav" id="hubNav" aria-label="Navigation principale">
+        <div class="hub-nav-links" id="hubNavLinks"></div>
+        <span id="authStatus" class="auth-status"></span>
+      </nav>
     </header>
 
-    <nav class="hub-nav" id="hubNav">
-      <div class="hub-nav-links" id="hubNavLinks"></div>
-      <span id="authStatus" class="auth-status"></span>
-    </nav>
+    <main>
+      <section class="landing-hero" aria-labelledby="heroTitle">
+        <div class="landing-copy">
+          <p class="landing-eyebrow"><span></span> L’ESPACE CENTRAL DE RODRICKBOT</p>
+          <h1 id="heroTitle">Votre bot WhatsApp,<br /><span>mieux maîtrisé.</span></h1>
+          <p class="landing-lead">Suivez vos instances, retrouvez les commandes et restez au courant des nouveautés depuis un seul espace.</p>
+          <div class="landing-actions">
+            <a class="landing-button landing-button-primary" href="dashboard.html">
+              Gérer mes instances
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            </a>
+            <a class="landing-button landing-button-secondary" href="commands.html">Découvrir les commandes</a>
+          </div>
+          <div class="landing-note"><span class="landing-note-dot"></span> Un point d’accès unique pour toute la communauté RodrickBOT</div>
+        </div>
 
-    <div id="keyBar">
-      <input id="apiKeyInput" type="password" placeholder="Clé API du dashboard" />
-      <button id="saveKeyBtn">Connexion</button>
-    </div>
+        <div class="landing-visual" aria-label="Aperçu des rubriques de Rodrick Hub">
+          <div class="landing-orbit landing-orbit-one"></div>
+          <div class="landing-orbit landing-orbit-two"></div>
+          <div class="landing-product-card">
+            <div class="product-card-top">
+              <span class="product-mark">R<span>H</span></span>
+              <span class="product-card-label">RODRICK HUB <span>• ESPACE CENTRAL</span></span>
+              <span class="product-menu-dots" aria-hidden="true">•••</span>
+            </div>
+            <div class="product-card-title">Tout est à sa place.</div>
+            <p class="product-card-subtitle">Les outils essentiels de votre bot, réunis dans une interface claire.</p>
+            <a class="product-link-row" href="dashboard.html">
+              <span class="product-link-icon product-icon-signal" aria-hidden="true">↗</span>
+              <span><strong>Instances</strong><small>État et activité des bots</small></span>
+              <span class="product-link-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="product-link-row" href="commands.html">
+              <span class="product-link-icon product-icon-command" aria-hidden="true">⌘</span>
+              <span><strong>Commandes</strong><small>Fonctions et aide d’utilisation</small></span>
+              <span class="product-link-arrow" aria-hidden="true">›</span>
+            </a>
+            <a class="product-link-row" href="releases.html">
+              <span class="product-link-icon product-icon-release" aria-hidden="true">✦</span>
+              <span><strong>Nouveautés</strong><small>Versions et améliorations</small></span>
+              <span class="product-link-arrow" aria-hidden="true">›</span>
+            </a>
+            <div class="product-card-footer"><span></span> Un espace pensé pour rester simple</div>
+          </div>
+          <div class="landing-float-tag"><span>✦</span> RodrickBOT</div>
+        </div>
+      </section>
 
-    <div id="error"></div>
+      <section class="landing-features" aria-labelledby="featuresTitle">
+        <div class="landing-section-heading">
+          <p class="landing-eyebrow">VOTRE ESPACE, VOS OUTILS</p>
+          <h2 id="featuresTitle">Tout ce qu’il faut pour avancer.</h2>
+          <p>Accédez rapidement aux informations utiles, sans vous perdre dans les menus.</p>
+        </div>
+        <div class="feature-grid">
+          <a class="feature-card" href="dashboard.html">
+            <span class="feature-icon feature-icon-copper" aria-hidden="true">⌁</span>
+            <span class="feature-card-kicker">SUIVI</span>
+            <h3>Vos instances</h3>
+            <p>Consultez l’état de vos bots et gérez leur configuration à distance.</p>
+            <span class="feature-link">Ouvrir le tableau de bord <span aria-hidden="true">→</span></span>
+          </a>
+          <a class="feature-card" href="commands.html">
+            <span class="feature-icon feature-icon-teal" aria-hidden="true">⌘</span>
+            <span class="feature-card-kicker">GUIDE</span>
+            <h3>Les commandes</h3>
+            <p>Explorez les fonctions du bot et trouvez comment les utiliser.</p>
+            <span class="feature-link">Voir les commandes <span aria-hidden="true">→</span></span>
+          </a>
+          <a class="feature-card" href="releases.html">
+            <span class="feature-icon feature-icon-amber" aria-hidden="true">✦</span>
+            <span class="feature-card-kicker">ÉVOLUTIONS</span>
+            <h3>Versions et nouveautés</h3>
+            <p>Suivez les mises à jour, les correctifs et les nouvelles fonctions.</p>
+            <span class="feature-link">Voir les versions <span aria-hidden="true">→</span></span>
+          </a>
+          <a class="feature-card" href="community.html">
+            <span class="feature-icon feature-icon-sky" aria-hidden="true">↗</span>
+            <span class="feature-card-kicker">COMMUNAUTÉ</span>
+            <h3>Échangez avec les autres</h3>
+            <p>Retrouvez les annonces, les guides et les publications de la communauté.</p>
+            <span class="feature-link">Rejoindre la communauté <span aria-hidden="true">→</span></span>
+          </a>
+        </div>
+      </section>
 
-    <div id="summary"></div>
-    <div class="grid" id="grid"></div>
-    <div id="empty" style="display:none">Aucune instance n'a encore envoyé de rapport.</div>
+      <section class="landing-bottom-cta" aria-labelledby="ctaTitle">
+        <div>
+          <p class="landing-eyebrow">PRÊT À EXPLORER ?</p>
+          <h2 id="ctaTitle">RodrickBOT commence ici.</h2>
+          <p>Choisissez une rubrique et retrouvez directement ce dont vous avez besoin.</p>
+        </div>
+        <div class="landing-actions">
+          <a class="landing-button landing-button-primary" href="releases.html">Voir les nouveautés <span aria-hidden="true">→</span></a>
+          <a class="landing-button landing-button-secondary" href="community.html">Visiter la communauté</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="landing-footer">
+      <a class="landing-brand" href="index.html"><span class="landing-footer-mark" aria-hidden="true">RH</span><span>Rodrick<span class="landing-brand-accent">Hub</span></span></a>
+      <span>Le point de rencontre de l’écosystème RodrickBOT.</span>
+    </footer>
   </div>
 
-  <script src="js/app.js"></script>
-  <script src="js/realtime.js"></script>
   <script src="js/nav.js"></script>
   <script src="js/auth-nav.js"></script>
 </body>

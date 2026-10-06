@@ -2,7 +2,7 @@
  * nav.js
  * ------------------------------------------------------------------
  * Source UNIQUE de la liste des pages du Hub. Avant ce fichier, chacune
- * des 11 pages HTML recopiait à la main les mêmes 5 liens — et cette
+ * des pages HTML recopiait à la main les mêmes liens — et cette
  * duplication avait déjà dérivé : login.html, register.html et
  * profile.html n'avaient que 3 liens sur 5, sans qu'on s'en rende compte
  * en éditant une page à la fois.
@@ -16,14 +16,14 @@
  *
  * Chaque page HTML n'a donc plus qu'un conteneur vide à tenir à jour
  * (aucun) — ajouter une page au Hub se fait en modifiant UNE seule fois
- * PAGES ci-dessous, plus jamais 11 fichiers séparés.
+ * PAGES ci-dessous, plus jamais un lien à corriger page par page.
  *
  * Ce fichier gère aussi le balayage tactile (swipe) gauche/droite pour
  * changer de page — voir initSwipeNavigation() plus bas.
  */
 
 // Icônes en SVG "trait" (stroke), dans l'esprit Feather/Lucide, dessinées
-// à la main plutôt qu'importées d'une bibliothèque — juste 5 icônes,
+// à la main plutôt qu'importées d'une bibliothèque — juste quelques icônes,
 // inutile d'ajouter une dépendance externe pour ça. stroke="currentColor"
 // est la partie importante : l'icône hérite automatiquement de la couleur
 // CSS de son lien parent (.hub-tabbar-icon), donc elle s'adapte toute
@@ -34,10 +34,12 @@ const ICONS = {
   gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.4-2.5 1a7.5 7.5 0 0 0-1.7-1L15 3h-4l-.3 2.6a7.5 7.5 0 0 0-1.7 1l-2.5-1-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.4 2.5-1c.5.4 1.1.8 1.7 1L11 21h4l.3-2.6c.6-.2 1.2-.6 1.7-1l2.5 1 2-3.4z"/></svg>',
   chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
   chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="20" x2="5" y2="12"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="19" y1="20" x2="19" y2="15"/></svg>',
+  tiles: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>',
 };
 
 const PAGES = [
-  { href: 'index.html', label: 'Dashboard', icon: ICONS.home },
+  { href: 'index.html', label: 'Accueil', icon: ICONS.home },
+  { href: 'dashboard.html', label: 'Instances', icon: ICONS.tiles },
   { href: 'releases.html', label: 'Versions', icon: ICONS.rocket },
   { href: 'commands.html', label: 'Commandes', icon: ICONS.gear },
   { href: 'community.html', label: 'Communauté', icon: ICONS.chat },

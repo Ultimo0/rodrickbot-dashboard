@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.5
+
+### Présentation
+- **Nouvelle page d’accueil Rodrick Hub** : présente clairement les instances, les commandes, les versions et la communauté avec des accès directs, une mise en page responsive et un aperçu visuel des rubriques.
+- **Tableau des instances conservé dans `dashboard.html`** : toutes ses fonctions restent disponibles depuis la navigation « Instances ».
+- **Navigation mise à jour** : ajoute les entrées Accueil et Instances sur ordinateur et mobile; le manifeste PWA décrit maintenant l’espace central Rodrick Hub.
+
 ## 0.9.4
 
 ### Correctifs
