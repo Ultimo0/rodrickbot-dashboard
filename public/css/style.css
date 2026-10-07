@@ -558,13 +558,33 @@ h1 .dim {
 
   /* --- Phases 1-9 : composants ajoutés après le dashboard d'origine --- */
 
-  /* Les liens de page vivent maintenant dans .hub-tabbar (en bas de
-     l'écran, voir plus loin) — on masque juste la copie du haut plutôt
-     que de la faire défiler horizontalement comme avant. Le sélecteur de
-     thème et le statut de connexion restent visibles ici : ce sont des
-     réglages ponctuels, pas une navigation entre pages, donc pas leur
-     place dans la barre d'onglets. */
-  .hub-nav-links { display: none; }
+  /* La navigation statique reste visible tant que nav.js n'a pas créé sa
+     barre enrichie. Si le script échoue, ces liens forment le repli mobile. */
+  .hub-nav-links {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    background: var(--card-solid);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .hub-nav-links a {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    height: 58px;
+    padding: 0 2px;
+    border-bottom: 0;
+    font-size: clamp(0.52rem, 2.7vw, 0.72rem);
+    text-align: center;
+    white-space: nowrap;
+  }
+  body.hub-nav-ready .hub-nav-links { display: none; }
   .hub-nav { justify-content: flex-end; gap: 10px; }
   .auth-status { margin-left: 0; }
 
@@ -625,6 +645,8 @@ h1 .dim {
        retrouveraient collées sous cette zone de geste système. */
     padding-bottom: env(safe-area-inset-bottom);
   }
+
+  body:not(.hub-nav-ready) .hub-tabbar { display: none; }
 
   .hub-tabbar a {
     flex: 1 1 0;
@@ -732,7 +754,7 @@ h1 .dim {
 }
 
 .hub-nav a:hover { color: var(--text); }
-.hub-nav a.active { color: var(--sky); border-bottom-color: var(--sky); }
+.hub-nav a.active, .hub-nav a[aria-current="page"] { color: var(--sky); border-bottom-color: var(--sky); }
 
 /* Pastille de nouveauté — même élément réutilisé dans la nav du haut
    (ici, simple pastille à côté du texte) et dans la barre d'onglets
@@ -2381,6 +2403,15 @@ h1 .dim {
   .landing-brand .brand-icon svg { width: 25px; height: 25px; }
   .landing-nav.hub-nav { width: auto; justify-content: flex-end; }
   .landing-nav .hub-nav-links { display: none; }
+  body:not(.hub-nav-ready) .landing-nav .hub-nav-links { display: flex; }
+  body:not(.hub-nav-ready) .landing-nav .hub-nav-links a {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 58px;
+    padding: 0 2px;
+    border-radius: 0;
+    font-size: clamp(0.52rem, 2.7vw, 0.72rem);
+  }
   .landing-nav .auth-status a { padding: 8px 11px; font-size: 0.8rem; }
   .landing-hero { grid-template-columns: 1fr; gap: 12px; min-height: auto; padding: 50px 0 52px; }
   .landing-copy h1 { font-size: clamp(2.55rem, 12vw, 3.8rem); }

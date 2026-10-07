@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.11
+
+### Correction
+- **Navigation de secours dans le HTML** : les liens restent disponibles sur ordinateur et mobile même si le script de navigation ne se charge pas; sur mobile, ils prennent la forme d’une barre fixe en bas de l’écran.
+
 ## 0.9.10
 
 ### Correction

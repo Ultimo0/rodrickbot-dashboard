@@ -230,6 +230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // mobiles. Les requêtes réseau ci-dessous ne doivent pas laisser la nav vide.
   renderTopNavLinks();
   renderBottomTabBar();
+  document.body.classList.add('hub-nav-ready');
 
   const [badges, admin] = await Promise.all([computeBadgeState(), computeAdminState()]);
   badgeState = badges;
