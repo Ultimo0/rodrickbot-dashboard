@@ -223,6 +223,11 @@ function initRealtimeNotifications() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Affiche immédiatement le menu horizontal desktop et les onglets publics
+  // mobiles. Les requêtes réseau ci-dessous ne doivent pas laisser la nav vide.
+  renderTopNavLinks();
+  renderBottomTabBar();
+
   const [badges, admin] = await Promise.all([computeBadgeState(), computeAdminState()]);
   badgeState = badges;
   isAdmin = admin;

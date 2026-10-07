@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.9
+
+### Correction
+- **Navigation toujours visible** : le menu horizontal desktop et la barre mobile s’affichent dès l’ouverture d’une page, sans attendre les vérifications réseau des notifications et du rôle admin.
+
 ## 0.9.8
 
 ### Interface admin
