@@ -1,3 +1,6 @@
+(function initHubNavigation() {
+  'use strict';
+
 /**
  * nav.js
  * ------------------------------------------------------------------
@@ -310,3 +313,5 @@ function initSwipeNavigation() {
     location.href = pages[nextIndex].href;
   }, { passive: true });
 }
+
+})();

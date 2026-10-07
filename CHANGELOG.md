@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.10
+
+### Correction
+- **Barre de navigation restaurée** : le script de navigation est isolé des autres scripts de page; cela évite le conflit de déclaration `isAdmin` qui empêchait les menus desktop et mobile de se charger sur Versions.
+
 ## 0.9.9
 
 ### Correction
