@@ -39,7 +39,7 @@ const ICONS = {
 
 const PAGES = [
   { href: 'index.html', label: 'Accueil', icon: ICONS.home },
-  { href: 'dashboard.html', label: 'Instances', icon: ICONS.tiles },
+  { href: 'dashboard.html', label: 'Instances', icon: ICONS.tiles, adminOnly: true },
   { href: 'releases.html', label: 'Versions', icon: ICONS.rocket },
   { href: 'commands.html', label: 'Commandes', icon: ICONS.gear },
   { href: 'community.html', label: 'Communauté', icon: ICONS.chat },
@@ -59,6 +59,11 @@ let badgeState = { releases: false, community: false };
 // prévient aussi le serveur (compte connecté) ou reste uniquement local
 // (visiteur anonyme, voir plus bas).
 let isLoggedIn = false;
+let isAdmin = false;
+
+function availablePages() {
+  return PAGES.filter((page) => !page.adminOnly || isAdmin);
+}
 
 function currentPage() {
   // "" (racine du site) doit compter comme index.html — sans ce cas
@@ -133,7 +138,7 @@ function renderTopNavLinks() {
   if (!container) return; // page qui n'a pas encore le conteneur (ne devrait pas arriver)
 
   const here = currentPage();
-  container.innerHTML = PAGES.map(
+  container.innerHTML = availablePages().map(
     (p) => `<a href="${p.href}"${p.href === here ? ' class="active"' : ''}>${p.label}${badgeDotHtml(p.href)}</a>`
   ).join('');
 }
@@ -151,7 +156,7 @@ function renderBottomTabBar() {
   tabBar.id = 'hubTabBar';
   tabBar.setAttribute('aria-label', 'Navigation principale');
 
-  tabBar.innerHTML = PAGES.map((p) => `
+  tabBar.innerHTML = availablePages().map((p) => `
     <a href="${p.href}"${p.href === here ? ' class="active"' : ''}>
       <span class="hub-tabbar-icon-wrap">
         <span class="hub-tabbar-icon" aria-hidden="true">${p.icon}</span>
@@ -218,13 +223,26 @@ function initRealtimeNotifications() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  badgeState = await computeBadgeState();
+  const [badges, admin] = await Promise.all([computeBadgeState(), computeAdminState()]);
+  badgeState = badges;
+  isAdmin = admin;
   markCurrentSectionSeen();
   renderTopNavLinks();
   renderBottomTabBar();
   initSwipeNavigation();
   initRealtimeNotifications();
 });
+
+async function computeAdminState() {
+  try {
+    const res = await fetch('/api/auth/me');
+    if (!res.ok) return false;
+    const user = await res.json();
+    return user.role === 'admin';
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Balayer vers la gauche → page suivante, vers la droite → page
@@ -238,7 +256,8 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 function initSwipeNavigation() {
   const here = currentPage();
-  const currentIndex = PAGES.findIndex((p) => p.href === here);
+  const pages = availablePages();
+  const currentIndex = pages.findIndex((p) => p.href === here);
   // Page hors de la liste (ex: admin.html, login.html) : pas de
   // "suivant/précédent" qui aurait un sens, on ne branche rien.
   if (currentIndex === -1) return;
@@ -281,8 +300,8 @@ function initSwipeNavigation() {
     if (Math.abs(deltaX) < MIN_DISTANCE || Math.abs(deltaX) < Math.abs(deltaY)) return;
 
     const nextIndex = deltaX < 0 ? currentIndex + 1 : currentIndex - 1;
-    if (nextIndex < 0 || nextIndex >= PAGES.length) return; // déjà au premier/dernier onglet
+    if (nextIndex < 0 || nextIndex >= pages.length) return; // déjà au premier/dernier onglet
 
-    location.href = PAGES[nextIndex].href;
+    location.href = pages[nextIndex].href;
   }, { passive: true });
 }

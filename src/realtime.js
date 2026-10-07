@@ -1,4 +1,6 @@
 import { WebSocketServer } from 'ws';
+import { findUserById } from './store/usersStore.js';
+import { sessionIdFromCookieHeader } from './utils/sessionCookie.js';
 
 /**
  * realtime.js
@@ -16,13 +18,33 @@ import { WebSocketServer } from 'ws';
  */
 
 let wss = null;
+let adminSessionContext = null;
 
-/** À appeler une seule fois, avec le serveur HTTP créé dans server.js. */
-export function initRealtime(httpServer) {
+function getStoredSession(sessionStore, sessionId) {
+  return new Promise((resolve, reject) => {
+    sessionStore.get(sessionId, (error, storedSession) => {
+      if (error) reject(error);
+      else resolve(storedSession || null);
+    });
+  });
+}
+
+/** À appeler une seule fois, avec le serveur HTTP et le store de sessions. */
+export function initRealtime(httpServer, { sessionStore, sessionSecret }) {
+  adminSessionContext = { sessionStore, sessionSecret };
   wss = new WebSocketServer({ server: httpServer });
 
-  wss.on('connection', (socket) => {
+  wss.on('connection', (socket, request) => {
     socket.on('error', () => {}); // évite qu'une erreur de socket fasse planter le process
+
+    const sessionId = sessionIdFromCookieHeader(request.headers.cookie, sessionSecret);
+    if (!sessionId || !sessionStore) return;
+
+    sessionStore.get(sessionId, (error, storedSession) => {
+      if (error || !storedSession?.userId) return;
+      socket.sessionId = sessionId;
+      socket.sessionUserId = storedSession.userId;
+    });
   });
 }
 
@@ -40,4 +62,29 @@ export function broadcast(event) {
     // en train de se fermer ou déjà fermée.
     if (client.readyState === 1) client.send(payload);
   }
+}
+
+/**
+ * Diffuse un signal aux sessions admin encore valides au moment de l'envoi.
+ * La session et le rôle sont relus à chaque signal : une déconnexion ou une
+ * rétrogradation prend ainsi effet sans attendre la fermeture du WebSocket.
+ */
+export async function broadcastToAdmins(event) {
+  if (!wss || !adminSessionContext?.sessionStore) return;
+
+  const payload = JSON.stringify(event);
+  await Promise.all([...wss.clients].map(async (client) => {
+    if (client.readyState !== 1 || !client.sessionId || !client.sessionUserId) return;
+
+    try {
+      const storedSession = await getStoredSession(adminSessionContext.sessionStore, client.sessionId);
+      if (!storedSession || String(storedSession.userId) !== String(client.sessionUserId)) return;
+
+      const user = await findUserById(client.sessionUserId);
+      if (user?.role === 'admin' && client.readyState === 1) client.send(payload);
+    } catch {
+      // Une panne de session ou de base ne doit ni faire échouer le heartbeat,
+      // ni envoyer un événement privé sans avoir pu revalider les droits.
+    }
+  }));
 }

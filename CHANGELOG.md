@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.8
+
+### Interface admin
+- **Panneau de détails des instances** : regroupe l’environnement, la configuration distante, la santé de connexion, les statistiques d’usage, l’état de yt-dlp et les fonctionnalités actives par groupe.
+- **Cartes d’instance allégées** : les données de diagnostic détaillées s’ouvrent dans un panneau latéral accessible au clavier et adapté au mobile.
+- **Accès strictement réservé aux comptes admin** : les routes de consultation et de gestion vérifient la session et le rôle; la clé partagée reste réservée aux heartbeats des bots.
+- **Navigation admin masquée aux autres comptes** et flux temps réel des instances limité aux sessions admin, sans données d’instance dans les événements publics.
+- Le panneau réutilise les informations déjà remontées par le bot; aucune nouvelle donnée ni route n’est nécessaire.
+
 ## 0.9.7
 
 ### Interface

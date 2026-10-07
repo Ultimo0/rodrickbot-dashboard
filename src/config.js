@@ -79,7 +79,7 @@ export function warnIfMisconfigured() {
   }
   if (!API_KEY) {
     console.warn(
-      "⚠️  DASHBOARD_API_KEY n'est pas défini dans .env — le serveur démarre mais rejettera toutes les requêtes."
+      "⚠️  DASHBOARD_API_KEY n'est pas défini dans .env — les heartbeats et rapports envoyés par les bots seront refusés."
     );
   }
   if (!SESSION_SECRET) {

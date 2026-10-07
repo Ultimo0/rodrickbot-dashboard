@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { requireApiKey } from '../middleware/requireApiKey.js';
+import { requireAuth } from '../middleware/requireAuth.js';
+import { requireAdmin } from '../middleware/requireAdmin.js';
 import {
   loadInstances,
   upsertHeartbeat,
@@ -10,7 +12,7 @@ import {
 } from '../store/instancesStore.js';
 import { getLatestRelease } from '../store/releasesStore.js';
 import { OFFLINE_AFTER_MS } from '../config.js';
-import { broadcast } from '../realtime.js';
+import { broadcastToAdmins } from '../realtime.js';
 import { ah } from '../utils/asyncHandler.js';
 
 // Un Router, c'est un "mini app" Express qu'on peut définir dans son
@@ -19,6 +21,10 @@ import { ah } from '../utils/asyncHandler.js';
 // du projet dans un seul fichier géant au fur et à mesure qu'on en ajoute
 // (versions, comptes, communauté...).
 export const instancesRouter = Router();
+
+// Le heartbeat reste authentifié par clé partagée pour les processus bots.
+// La consultation et la gestion des instances, elles, sont réservées aux
+// comptes admin du Hub (voir les routes GET /instances et POST/DELETE).
 
 // Configuration pilotable à distance (Phase 1d). MÊMES règles que côté bot
 // (config/index.js::isValidPrefix) — dupliquées ici parce que ce sont deux
@@ -86,7 +92,7 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
   };
   const saved = await upsertHeartbeat(instance);
   await logHeartbeat(instanceId, messageCount);
-  broadcast({ type: 'instance-update', instance: saved });
+  broadcastToAdmins({ type: 'instance-update' });
 
   // Comparaison simple par égalité de chaîne, pas un tri SemVer : on ne
   // classe jamais les versions entre elles, on détecte juste "la version
@@ -120,7 +126,7 @@ instancesRouter.post('/heartbeat', requireApiKey, ah(async (req, res) => {
  * qu'ignorées en silence, pour ne pas laisser croire qu'un réglage a été
  * envoyé alors que le bot l'ignorerait.
  */
-instancesRouter.post('/instances/:instanceId/config', requireApiKey, ah(async (req, res) => {
+instancesRouter.post('/instances/:instanceId/config', requireAuth, requireAdmin, ah(async (req, res) => {
   const { instanceId } = req.params;
   const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
   const keys = Object.keys(body);
@@ -144,12 +150,12 @@ instancesRouter.post('/instances/:instanceId/config', requireApiKey, ah(async (r
     return res.status(404).json({ error: 'Instance inconnue.' });
   }
 
-  broadcast({ type: 'instance-update', instance });
+  broadcastToAdmins({ type: 'instance-update' });
 
   res.json({ ok: true, instanceId, configVersion: instance.configVersion, remoteConfig: instance.remoteConfig });
 }));
 
-instancesRouter.post('/instances/:instanceId/toggle', requireApiKey, ah(async (req, res) => {
+instancesRouter.post('/instances/:instanceId/toggle', requireAuth, requireAdmin, ah(async (req, res) => {
   const { instanceId } = req.params;
   const { enabled } = req.body || {};
 
@@ -162,7 +168,7 @@ instancesRouter.post('/instances/:instanceId/toggle', requireApiKey, ah(async (r
     return res.status(404).json({ error: 'Instance inconnue.' });
   }
 
-  broadcast({ type: 'instance-update', instance });
+  broadcastToAdmins({ type: 'instance-update' });
 
   res.json({ ok: true, instanceId, enabled });
 }));
@@ -171,16 +177,16 @@ instancesRouter.post('/instances/:instanceId/toggle', requireApiKey, ah(async (r
  * Supprime définitivement les infos d'une instance (utile quand une copie
  * est hors ligne de façon permanente et qu'on veut nettoyer le dashboard).
  */
-instancesRouter.delete('/instances/:instanceId', requireApiKey, ah(async (req, res) => {
+instancesRouter.delete('/instances/:instanceId', requireAuth, requireAdmin, ah(async (req, res) => {
   const { instanceId } = req.params;
 
   if (!(await deleteInstance(instanceId))) return res.status(404).json({ error: 'Instance inconnue.' });
-  broadcast({ type: 'instance-deleted', instanceId });
+  broadcastToAdmins({ type: 'instance-deleted' });
 
   res.json({ ok: true, instanceId, deleted: true });
 }));
 
-instancesRouter.get('/instances', requireApiKey, ah(async (req, res) => {
+instancesRouter.get('/instances', requireAuth, requireAdmin, ah(async (req, res) => {
   const instances = await loadInstances();
   const now = Date.now();
 

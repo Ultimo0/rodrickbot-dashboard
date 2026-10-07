@@ -2,10 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   FAVORITES_FILTER,
+  activeFeatureCounts,
   filterCommands,
   filterInstances,
   formatCommandUsage,
+  formatDateTime,
   normalizeSearch,
+  ytDlpRefreshLabel,
 } from '../public/js/ui-utils.js';
 
 test('normalise accents and strips a command prefix from searches', () => {
@@ -43,4 +46,21 @@ test('filters favorites and formats the usage with the standard prefix', () => {
   }), [command]);
   assert.equal(formatCommandUsage(command), '!meteo <ville>');
   assert.equal(formatCommandUsage({ name: 'ping' }), '!ping');
+});
+
+test('summarises active group features safely and with readable labels', () => {
+  assert.deepEqual(activeFeatureCounts({ antilink: 3, antistatut: 0, customFeature: 2 }), [
+    { name: 'antilink', label: 'Anti-lien', count: 3 },
+    { name: 'customFeature', label: 'custom Feature', count: 2 },
+  ]);
+  assert.equal(activeFeatureCounts(null), null);
+  assert.deepEqual(activeFeatureCounts({ antilink: -1, guardian: '5' }), []);
+});
+
+test('formats instance timestamps and yt-dlp refresh states', () => {
+  assert.equal(formatDateTime(null), 'Non communiqué');
+  assert.match(formatDateTime(0), /1970/);
+  assert.equal(ytDlpRefreshLabel(true), 'Actualisation réussie');
+  assert.equal(ytDlpRefreshLabel(false), 'Échec de la dernière actualisation');
+  assert.equal(ytDlpRefreshLabel(null), 'État non communiqué par cette version');
 });

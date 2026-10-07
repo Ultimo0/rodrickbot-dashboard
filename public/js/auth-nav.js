@@ -18,12 +18,19 @@ function escapeHtml(str) {
 
 (async function initAuthNav() {
   const el = document.getElementById('authStatus');
-  if (!el) return;
+
+  function setAdminOnlyLinksVisible(isAdmin) {
+    document.querySelectorAll('[data-admin-only-link]').forEach((link) => {
+      link.hidden = !isAdmin;
+    });
+  }
 
   try {
     const res = await fetch('/api/auth/me');
     if (res.ok) {
       const user = await res.json();
+      setAdminOnlyLinksVisible(user.role === 'admin');
+      if (!el) return;
       const adminLink = user.role === 'admin' ? '<a href="admin.html" class="admin-nav-link">🛠️ Admin</a>' : '';
       const displayName = escapeHtml(user.name || user.email);
 
@@ -36,9 +43,11 @@ function escapeHtml(str) {
 
       el.innerHTML = `${adminLink}<a href="profile.html" class="nav-profile-link">${avatarHtml}${displayName}</a>`;
     } else {
-      el.innerHTML = '<a href="login.html">Connexion</a>';
+      setAdminOnlyLinksVisible(false);
+      if (el) el.innerHTML = '<a href="login.html">Connexion</a>';
     }
   } catch {
-    el.innerHTML = '<a href="login.html">Connexion</a>';
+    setAdminOnlyLinksVisible(false);
+    if (el) el.innerHTML = '<a href="login.html">Connexion</a>';
   }
 })();

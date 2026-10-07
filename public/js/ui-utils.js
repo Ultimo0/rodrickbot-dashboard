@@ -56,3 +56,49 @@ export function formatCommandUsage(command) {
   const syntax = String(command.syntax ?? '').trim().replace(/\{prefix\}/gi, '!');
   return syntax || `!${command.name}`;
 }
+
+const FEATURE_LABELS = {
+  welcome: 'Bienvenue',
+  bye: 'Départ',
+  antilink: 'Anti-lien',
+  antipromote: 'Anti-promotion',
+  antidemote: 'Anti-rétrogradation',
+  guardian: 'Guardian',
+  antispam: 'Anti-spam',
+  antipurge: 'Anti-suppression',
+  antistatut: 'Anti-statut',
+  antiflood: 'Anti-flood',
+  antiraid: 'Anti-raid',
+  antitransfer: 'Anti-transfert',
+  autotranslate: 'Traduction automatique',
+  linkWhitelist: 'Liste blanche de liens',
+};
+
+export function activeFeatureCounts(features) {
+  if (!features || typeof features !== 'object' || Array.isArray(features)) return null;
+
+  return Object.entries(features)
+    .filter(([, count]) => Number.isSafeInteger(count) && count > 0)
+    .map(([name, count]) => ({
+      name,
+      label: FEATURE_LABELS[name] || name.replace(/([a-z])([A-Z])/g, '$1 $2'),
+      count,
+    }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'fr'));
+}
+
+export function formatDateTime(timestamp) {
+  if (timestamp == null || !Number.isFinite(Number(timestamp))) return 'Non communiqué';
+  const date = new Date(Number(timestamp));
+  if (Number.isNaN(date.getTime())) return 'Non communiqué';
+  return new Intl.DateTimeFormat('fr-FR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+export function ytDlpRefreshLabel(status) {
+  if (status === true) return 'Actualisation réussie';
+  if (status === false) return 'Échec de la dernière actualisation';
+  return 'État non communiqué par cette version';
+}

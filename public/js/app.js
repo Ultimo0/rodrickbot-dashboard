@@ -1,7 +1,12 @@
-import { filterInstances } from './ui-utils.js';
+import {
+  activeFeatureCounts,
+  filterInstances,
+  formatDateTime,
+  ytDlpRefreshLabel,
+} from './ui-utils.js';
 
-const STORAGE_KEY = 'rodrick_hub_api_key';
-const input = document.getElementById('apiKeyInput');
+const accessGate = document.getElementById('instanceAccessGate');
+const adminContent = document.getElementById('instanceAdminContent');
 const grid = document.getElementById('grid');
 const summary = document.getElementById('summary');
 const emptyEl = document.getElementById('empty');
@@ -12,31 +17,19 @@ const toolbar = document.getElementById('instanceToolbar');
 const searchInput = document.getElementById('instanceSearch');
 const filterBar = document.getElementById('instanceFilters');
 const resultCountEl = document.getElementById('instanceResultCount');
+const detailsDialog = document.getElementById('instanceDetailsDialog');
+const detailsContent = document.getElementById('instanceDetailsContent');
 
 let allInstances = [];
 let activeFilter = 'all';
 let feedbackTimer;
+let selectedInstanceId = null;
+let detailsOpener = null;
+let isAdminSession = false;
 
-input.value = localStorage.getItem(STORAGE_KEY) || '';
-
-document.getElementById('saveKeyBtn').addEventListener('click', () => {
-  const key = input.value.trim();
-  if (!key) {
-    input.focus();
-    showFeedback('Saisis la clé API du dashboard pour charger tes instances.', true);
-    return;
-  }
-  localStorage.setItem(STORAGE_KEY, key);
-  showFeedback('Connexion en cours…');
-  refresh(true);
-});
-input.addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') document.getElementById('saveKeyBtn').click();
-});
-
-function apiKey() {
-  return localStorage.getItem(STORAGE_KEY) || '';
-}
+// L’ancienne interface stockait la clé technique partagée avec les bots
+// dans localStorage. Les pages admin utilisent maintenant la session Hub.
+try { localStorage.removeItem('rodrick_hub_api_key'); } catch {}
 
 function formatUptime(seconds) {
   if (seconds == null) return '—';
@@ -131,7 +124,7 @@ function connectionHealthHtml(inst) {
   return `
     <div class="info-row"><span class="k">Reconnexions</span><span>${inst.reconnectCount ?? '—'}</span></div>
     ${inst.lastDisconnectAt != null
-      ? `<div class="info-row"><span class="k">Dernière coupure</span><span>${timeAgo(inst.lastDisconnectAt)}${reason ? ` (${escapeHtml(reason)})` : ''}</span></div>`
+      ? `<div class="info-row"><span class="k">Dernière coupure</span><span title="${escapeHtml(formatDateTime(inst.lastDisconnectAt))}">${timeAgo(inst.lastDisconnectAt)}${reason ? ` (${escapeHtml(reason)})` : ''}</span></div>`
       : ''}
   `;
 }
@@ -146,15 +139,6 @@ function instanceCardHtml(inst) {
     ? `<button class="delete-btn" type="button" data-id="${escapeHtml(inst.instanceId)}" aria-label="Supprimer l’instance ${escapeHtml(inst.instanceId)}" title="Supprimer définitivement cette instance">🗑️</button>`
     : '';
 
-  // appliedConfigVersion vaut null tant que le bot n'a JAMAIS envoyé cet
-  // accusé de réception : c'est une copie pas encore mise à jour vers une
-  // version qui gère la configuration poussée (RodrickBOT 1.82.0+). Lui
-  // pousser un préfixe resterait "en attente" indéfiniment, donc bouton
-  // désactivé avec l'explication plutôt qu'une promesse trompeuse.
-  const canPushConfig = inst.appliedConfigVersion != null;
-  const prefixBtn = `<button class="prefix-btn" type="button" aria-label="Changer le préfixe de ${escapeHtml(inst.instanceId)}" data-id="${escapeHtml(inst.instanceId)}" data-prefix="${escapeHtml(inst.prefix)}" ${canPushConfig ? '' : 'disabled'} title="${canPushConfig ? 'Changer le préfixe à distance' : 'Cette copie doit d\'abord être mise à jour (RodrickBOT 1.82.0 ou plus)'}">✏️</button>`;
-  const pendingPrefix = pendingRemotePrefix(inst);
-
   return `
     <article class="instance-card ${enabled ? '' : 'disabled-card'}">
       <div class="top">
@@ -168,15 +152,10 @@ function instanceCardHtml(inst) {
         </div>
       </div>
       <div class="info-row"><span class="k">Bot</span><span>${escapeHtml(inst.botName)} v${escapeHtml(inst.version)}</span></div>
-      <div class="info-row"><span class="k">Mode</span><span>${escapeHtml(inst.mode)}</span></div>
-      <div class="info-row"><span class="k">Préfixe</span><span>${escapeHtml(inst.prefix)}${prefixBtn}</span></div>
-      ${pendingPrefix ? `<div class="config-pending">⏳ En attente : « ${escapeHtml(pendingPrefix)} » — appliqué au prochain contact du bot</div>` : ''}
       <div class="info-row"><span class="k">Uptime</span><span>${formatUptime(inst.uptimeSeconds)}</span></div>
-      <div class="info-row"><span class="k">Messages traités</span><span>${inst.messageCount ?? '—'}</span></div>
       <div class="info-row"><span class="k">Dernier contact</span><span>${timeAgo(inst.lastSeen)}</span></div>
-      ${connectionHealthHtml(inst)}
-      ${topCommandsHtml(inst.commandStats)}
       <div class="actions">
+        <button class="details-btn" type="button" data-action="details" data-id="${escapeHtml(inst.instanceId)}" aria-haspopup="dialog">Détails</button>
         <button class="toggle-btn ${enabled ? 'is-on' : 'is-off'}" type="button" data-id="${escapeHtml(inst.instanceId)}" data-enabled="${enabled}">
           ${enabled ? 'Désactiver cette instance' : 'Réactiver cette instance'}
         </button>
@@ -184,6 +163,181 @@ function instanceCardHtml(inst) {
       </div>
     </article>
   `;
+}
+
+function detailRowHtml(label, value) {
+  return `<div class="detail-row"><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`;
+}
+
+function detailSectionHtml(title, contents) {
+  return `<section class="detail-section"><h3>${escapeHtml(title)}</h3>${contents}</section>`;
+}
+
+function formatCount(value) {
+  return value == null || !Number.isFinite(Number(value))
+    ? 'Non communiqué par cette version'
+    : new Intl.NumberFormat('fr-FR').format(Number(value));
+}
+
+function activeFeaturesHtml(inst) {
+  const features = activeFeatureCounts(inst.activeFeatures);
+  if (features === null) {
+    return '<p class="detail-empty">Les fonctionnalités par groupe ne sont pas encore communiquées par cette version du bot.</p>';
+  }
+  if (features.length === 0) {
+    return '<p class="detail-empty">Aucune de ces fonctionnalités n’est actuellement activée dans les groupes suivis.</p>';
+  }
+  return `<ul class="feature-count-list">${features.map((feature) => `
+    <li><span>${escapeHtml(feature.label)}</span><strong>${feature.count} groupe${feature.count > 1 ? 's' : ''}</strong></li>
+  `).join('')}</ul>`;
+}
+
+function instanceDetailsHtml(inst) {
+  const enabled = inst.enabled !== false;
+  const online = inst.online === true;
+  const canPushConfig = inst.appliedConfigVersion != null;
+  const pendingPrefix = pendingRemotePrefix(inst);
+  const configIsPending = Number(inst.configVersion || 0) > Number(inst.appliedConfigVersion || 0);
+  const prefixButton = `<button class="prefix-btn" type="button" data-details-action="edit-prefix"
+    data-id="${escapeHtml(inst.instanceId)}" data-prefix="${escapeHtml(inst.prefix)}"
+    aria-label="Changer le préfixe de ${escapeHtml(inst.instanceId)}" ${canPushConfig ? '' : 'disabled'}
+    title="${canPushConfig ? 'Changer le préfixe à distance' : 'Cette copie doit d’abord être mise à jour vers RodrickBOT 1.82.0 ou plus.'}">Modifier</button>`;
+  const prefixValue = `${escapeHtml(inst.prefix)} ${prefixButton}`;
+  const configStatus = canPushConfig
+    ? configIsPending
+      ? `En attente d’application · configuration v${formatCount(inst.configVersion)}`
+      : `Synchronisée · v${formatCount(inst.appliedConfigVersion)}`
+    : 'Accusé de réception indisponible — mise à jour du bot requise';
+  const mediaStatus = ytDlpRefreshLabel(inst.ytdlpLastRefreshOk);
+  const features = activeFeaturesHtml(inst);
+  const lastSeenDate = formatDateTime(inst.lastSeen);
+  const reconnectData = inst.reconnectCount == null && inst.lastDisconnectAt == null
+    ? '<p class="detail-empty">Aucune donnée de connexion détaillée reçue.</p>'
+    : `<div class="detail-rows">${connectionHealthHtml(inst)}</div>`;
+
+  return `
+    <header class="drawer-header">
+      <div class="drawer-title-group">
+        <p class="drawer-eyebrow">SUPERVISION ADMIN</p>
+        <h2 id="instanceDetailsTitle">${escapeHtml(inst.botName || 'RodrickBOT')}</h2>
+        <p class="drawer-instance-id">${escapeHtml(inst.instanceId)}</p>
+      </div>
+      <button class="drawer-close" type="button" data-details-action="close" aria-label="Fermer les détails">×</button>
+    </header>
+    <div class="drawer-scroll">
+      <div class="drawer-state-card">
+        <div class="instance-status">
+          <span class="badge ${online ? 'online' : 'offline'}"><span class="status-dot" aria-hidden="true"></span>${online ? 'En ligne' : 'Hors ligne'}</span>
+          <span class="badge ${enabled ? 'enabled-badge' : 'disabled-badge'}">${enabled ? 'Activée' : 'Désactivée'}</span>
+        </div>
+        <p>Propriétaire : <strong>${escapeHtml(inst.ownerName || 'Inconnu')}</strong></p>
+        <p>Dernier contact : <strong title="${escapeHtml(lastSeenDate)}">${timeAgo(inst.lastSeen)}</strong></p>
+      </div>
+
+      ${detailSectionHtml('Vue d’ensemble', `
+        <div class="drawer-metrics">
+          <div><span>Groupes suivis</span><strong>${formatCount(inst.groupCount)}</strong></div>
+          <div><span>Messages traités</span><strong>${formatCount(inst.messageCount)}</strong></div>
+          <div><span>Temps de fonctionnement</span><strong>${formatUptime(inst.uptimeSeconds)}</strong></div>
+        </div>
+      `)}
+
+      ${detailSectionHtml('Configuration et environnement', `
+        <div class="detail-rows">
+          ${detailRowHtml('Version du bot', `v${escapeHtml(inst.version || '?')}`)}
+          ${detailRowHtml('Version de Node.js', escapeHtml(inst.nodeVersion || 'Non communiquée'))}
+          ${detailRowHtml('Mode', escapeHtml(inst.mode || 'Non communiqué'))}
+          ${detailRowHtml('Préfixe', prefixValue)}
+          ${detailRowHtml('Configuration distante', `<span class="${configIsPending ? 'detail-pending' : ''}">${escapeHtml(configStatus)}</span>`)}
+        </div>
+        ${pendingPrefix ? `<p class="config-pending">⏳ Le préfixe « ${escapeHtml(pendingPrefix)} » sera appliqué au prochain contact du bot.</p>` : ''}
+      `)}
+
+      ${detailSectionHtml('Santé de connexion', `
+        ${detailRowHtml('État actuel', online ? 'Connectée' : 'Hors ligne')}
+        ${detailRowHtml('Dernier signal reçu', `<span title="${escapeHtml(lastSeenDate)}">${timeAgo(inst.lastSeen)}</span>`)}
+        ${reconnectData}
+      `)}
+
+      ${detailSectionHtml('Téléchargement média', `
+        <div class="detail-rows">
+          ${detailRowHtml('État de yt-dlp', `<span class="${inst.ytdlpLastRefreshOk === false ? 'detail-error' : inst.ytdlpLastRefreshOk === true ? 'detail-success' : ''}">${escapeHtml(mediaStatus)}</span>`)}
+          ${detailRowHtml('Version installée', escapeHtml(inst.ytdlpVersion || 'Non communiquée'))}
+          ${detailRowHtml('Dernière actualisation', escapeHtml(formatDateTime(inst.ytdlpLastRefreshAt)))}
+        </div>
+      `)}
+
+      ${detailSectionHtml('Fonctionnalités actives par groupe', features)}
+      ${detailSectionHtml('Commandes les plus utilisées', topCommandsHtml(inst.commandStats))}
+    </div>
+  `;
+}
+
+function openInstanceDetails(instanceId, opener) {
+  selectedInstanceId = instanceId;
+  detailsOpener = opener;
+  renderInstanceDetails();
+  if (!detailsDialog.open) detailsDialog.showModal();
+}
+
+function renderInstanceDetails() {
+  if (!selectedInstanceId) return;
+  const instance = allInstances.find((item) => item.instanceId === selectedInstanceId);
+  if (!instance) {
+    if (detailsDialog.open) detailsDialog.close();
+    return;
+  }
+  detailsContent.innerHTML = instanceDetailsHtml(instance);
+}
+
+function renderAccessGate(title, message, action) {
+  const heading = document.createElement('strong');
+  heading.textContent = title;
+  const description = document.createElement('p');
+  description.textContent = message;
+  accessGate.replaceChildren(heading, description);
+
+  if (action) {
+    const link = document.createElement('a');
+    link.href = action.href;
+    link.textContent = action.label;
+    accessGate.append(link);
+  }
+  accessGate.hidden = false;
+}
+
+async function initializeDashboard() {
+  try {
+    const response = await fetch('/api/auth/me', { credentials: 'same-origin' });
+    if (!response.ok) {
+      if (response.status === 401) {
+        renderAccessGate(
+          'Connexion administrateur requise',
+          'Connecte-toi avec un compte administrateur pour consulter et gérer les instances.',
+          { href: 'login.html', label: 'Se connecter' }
+        );
+      } else {
+        renderAccessGate('Vérification impossible', 'Le Hub n’a pas pu confirmer ton accès. Réessaie dans un instant.');
+      }
+      return;
+    }
+
+    const user = await response.json();
+    if (user.role !== 'admin') {
+      renderAccessGate(
+        'Espace réservé aux administrateurs',
+        'Le compte connecté ne dispose pas des droits nécessaires pour accéder à la supervision des instances.'
+      );
+      return;
+    }
+
+    isAdminSession = true;
+    accessGate.hidden = true;
+    adminContent.hidden = false;
+    await refresh(true);
+  } catch {
+    renderAccessGate('Vérification impossible', 'Impossible de contacter le Hub pour vérifier les droits administrateur.');
+  }
 }
 
 function renderSummary() {
@@ -220,14 +374,27 @@ function renderInstances() {
 }
 
 async function refresh(showSuccess = false) {
-  const key = apiKey();
+  if (!isAdminSession) return;
   errorEl.style.display = 'none';
   errorEl.textContent = '';
 
   try {
-    const res = await fetch('/api/instances', { headers: { 'x-api-key': key } });
+    const res = await fetch('/api/instances', { credentials: 'same-origin' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
+      if (res.status === 401 || res.status === 403) {
+        isAdminSession = false;
+        adminContent.hidden = true;
+        if (detailsDialog.open) detailsDialog.close();
+        renderAccessGate(
+          res.status === 401 ? 'Connexion administrateur requise' : 'Espace réservé aux administrateurs',
+          res.status === 401
+            ? 'Ta session a expiré. Reconnecte-toi pour accéder à la supervision.'
+            : 'Le compte connecté ne dispose plus des droits administrateur.',
+          res.status === 401 ? { href: 'login.html', label: 'Se reconnecter' } : null
+        );
+        return;
+      }
       errorEl.textContent = data.error || `Erreur serveur (${res.status})`;
       errorEl.style.display = 'block';
       grid.innerHTML = '';
@@ -235,6 +402,7 @@ async function refresh(showSuccess = false) {
       toolbar.hidden = true;
       emptyEl.hidden = true;
       noResultsEl.hidden = true;
+      if (detailsDialog.open) detailsDialog.close();
       showFeedback(errorEl.textContent, true);
       return;
     }
@@ -244,28 +412,29 @@ async function refresh(showSuccess = false) {
     toolbar.hidden = false;
     renderSummary();
     renderInstances();
+    if (detailsDialog.open) renderInstanceDetails();
     if (showSuccess) showFeedback('Connexion réussie : tes instances sont chargées.');
   } catch (err) {
     errorEl.textContent = 'Impossible de contacter le serveur.';
     errorEl.style.display = 'block';
-    showFeedback('La connexion au dashboard a échoué. Vérifie le réseau et la clé API.', true);
+    showFeedback('La connexion au dashboard a échoué. Vérifie le réseau et ta session administrateur.', true);
   }
 }
 
 async function toggleInstance(instanceId, enabled, button) {
-  const key = apiKey();
   const originalText = button.textContent;
   button.disabled = true;
   button.textContent = 'Mise à jour…';
   try {
     const res = await fetch(`/api/instances/${encodeURIComponent(instanceId)}/toggle`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ enabled }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      showFeedback(data.error || 'Impossible de changer le statut. Vérifie la clé API.', true);
+      showFeedback(data.error || 'Impossible de changer le statut. Vérifie ta session administrateur.', true);
       return;
     }
     showFeedback(enabled ? 'Instance réactivée.' : 'Instance désactivée.');
@@ -298,16 +467,16 @@ async function changeRemotePrefix(instanceId, currentPrefix) {
   if (!isValidPrefix(prefix)) { showFeedback('Préfixe invalide : 1 à 5 caractères, sans espace.', true); return; }
   if (prefix === currentPrefix) { showFeedback('C’est déjà le préfixe actuel de cette copie.'); return; }
 
-  const key = apiKey();
   try {
     const res = await fetch(`/api/instances/${encodeURIComponent(instanceId)}/config`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prefix }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      showFeedback(data.error || 'Impossible de changer le préfixe. Vérifie la clé API.', true);
+      showFeedback(data.error || 'Impossible de changer le préfixe. Vérifie ta session administrateur.', true);
       return;
     }
     showFeedback(`Préfixe « ${prefix} » envoyé. Il sera appliqué au prochain contact du bot.`);
@@ -321,13 +490,12 @@ async function deleteInstance(instanceId) {
   );
   if (!confirmed) return;
 
-  const key = apiKey();
   try {
     const res = await fetch(`/api/instances/${encodeURIComponent(instanceId)}`, {
       method: 'DELETE',
-      headers: { 'x-api-key': key },
+      credentials: 'same-origin',
     });
-    if (!res.ok) { showFeedback('Impossible de supprimer cette instance. Vérifie la clé API.', true); return; }
+    if (!res.ok) { showFeedback('Impossible de supprimer cette instance. Vérifie ta session administrateur.', true); return; }
     showFeedback('Instance supprimée du tableau de bord.');
     await refresh();
   } catch { showFeedback('Impossible de contacter le serveur pour supprimer cette instance.', true); }
@@ -343,6 +511,12 @@ filterBar.addEventListener('click', (event) => {
 });
 
 grid.addEventListener('click', (event) => {
+  const detailsButton = event.target.closest('[data-action="details"]');
+  if (detailsButton) {
+    openInstanceDetails(detailsButton.dataset.id, detailsButton);
+    return;
+  }
+
   const toggleButton = event.target.closest('.toggle-btn');
   if (toggleButton) {
     toggleInstance(toggleButton.dataset.id, toggleButton.dataset.enabled !== 'true', toggleButton);
@@ -359,7 +533,26 @@ grid.addEventListener('click', (event) => {
   if (prefixButton) changeRemotePrefix(prefixButton.dataset.id, prefixButton.dataset.prefix);
 });
 
-refresh();
+detailsDialog.addEventListener('click', (event) => {
+  const actionButton = event.target.closest('[data-details-action]');
+  if (actionButton?.dataset.detailsAction === 'close') {
+    detailsDialog.close();
+    return;
+  }
+  if (actionButton?.dataset.detailsAction === 'edit-prefix') {
+    changeRemotePrefix(actionButton.dataset.id, actionButton.dataset.prefix);
+    return;
+  }
+  if (event.target === detailsDialog) detailsDialog.close();
+});
+
+detailsDialog.addEventListener('close', () => {
+  selectedInstanceId = null;
+  if (detailsOpener?.isConnected) detailsOpener.focus();
+  detailsOpener = null;
+});
+
+initializeDashboard();
 
 // Avant le temps réel, on redemandait "y a-t-il du nouveau ?" toutes les
 // 10s, que ça ait changé ou non (setInterval(refresh, 10000)). Maintenant,

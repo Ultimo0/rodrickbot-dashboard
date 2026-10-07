@@ -48,6 +48,8 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json());
 
 const PgSession = connectPgSimple(session);
+const sessionSecret = SESSION_SECRET || 'valeur-par-defaut-non-securisee-a-changer';
+const sessionStore = new PgSession({ pool, createTableIfMissing: true, tableName: 'session' });
 
 // express-session doit être branché AVANT les routes qui en ont besoin
 // (req.session n'existe que grâce à ce middleware). "resave: false" et
@@ -61,8 +63,8 @@ const PgSession = connectPgSimple(session);
 // tout le monde serait déconnecté à chaque redémarrage du service, et la
 // mémoire grossirait indéfiniment tant que le process tourne.
 app.use(session({
-  store: new PgSession({ pool, createTableIfMissing: true, tableName: 'session' }),
-  secret: SESSION_SECRET || 'valeur-par-defaut-non-securisee-a-changer',
+  store: sessionStore,
+  secret: sessionSecret,
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -128,7 +130,7 @@ app.use((err, req, res, next) => {
 // d'Express — les deux partagent le même port, distingués automatiquement
 // par le protocole de la requête (http:// classique vs ws://).
 const httpServer = http.createServer(app);
-initRealtime(httpServer);
+initRealtime(httpServer, { sessionStore, sessionSecret });
 
 httpServer.listen(PORT, () => {
   console.log(`Rodrick Hub en écoute sur le port ${PORT} (HTTP + WebSocket)`);
