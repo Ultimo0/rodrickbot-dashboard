@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.12
+
+### Accueil
+- **Bouton « S’inscrire » ajouté** dans l’action principale de la page d’accueil, visible uniquement aux visiteurs non connectés.
+
 ## 0.9.11
 
 ### Correction
