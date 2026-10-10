@@ -31,27 +31,71 @@
       <span id="authStatus" class="auth-status"></span>
     </nav>
 
-    <form id="registerForm" class="auth-form">
-      <div class="field">
-        <span class="field-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="8" r="4.5"/></svg></span>
-        <input id="fName" type="text" placeholder="Ton nom" required autocomplete="name" />
-      </div>
-      <div class="field">
-        <span class="field-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 6.5 8 6 8-6"/></svg></span>
-        <input id="fEmail" type="email" placeholder="Adresse email" required autocomplete="email" />
-      </div>
-      <div class="field field-password">
-        <span class="field-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
-        <input id="fPassword" type="password" placeholder="Mot de passe (8 caractères min.)" required minlength="8" autocomplete="new-password" />
-        <button type="button" id="togglePassword" class="field-toggle" aria-label="Afficher le mot de passe" aria-pressed="false"></button>
-      </div>
-      <button type="submit">S'inscrire</button>
-      <div id="formError" class="form-error"></div>
-    </form>
+    <main class="auth-stage" data-auth-mode="register">
+      <section class="auth-companion" aria-label="Assistant Rodrick Hub">
+        <div class="assistant-signal" aria-hidden="true"><span></span><span></span><span></span></div>
+        <svg class="auth-robot" viewBox="0 0 360 330" role="img" aria-labelledby="robotRegisterTitle robotRegisterDesc">
+          <title id="robotRegisterTitle">Assistant d'inscription Rodrick Hub</title>
+          <desc id="robotRegisterDesc">Un petit robot futuriste qui accompagne la création du compte.</desc>
+          <g class="robot-shadow"><ellipse cx="180" cy="294" rx="110" ry="16"/></g>
+          <g class="robot-antenna"><path d="M180 69V45"/><circle cx="180" cy="35" r="10"/></g>
+          <g class="robot-arm robot-arm-left"><path d="M105 185 63 215 43 195"/><circle cx="41" cy="193" r="12"/></g>
+          <g class="robot-arm robot-arm-right"><path d="M255 185 298 215 318 195"/><circle cx="320" cy="193" r="12"/></g>
+          <g class="robot-body"><path d="M123 186h114l18 91a18 18 0 0 1-18 22H123a18 18 0 0 1-18-22z"/><path class="robot-chest" d="M143 218h74v40h-74z"/><circle cx="161" cy="238" r="6"/><circle cx="180" cy="238" r="6"/><circle cx="199" cy="238" r="6"/></g>
+          <g class="robot-head"><rect x="91" y="68" width="178" height="132" rx="47"/><rect class="robot-face" x="111" y="91" width="138" height="85" rx="28"/>
+            <g class="robot-eyes"><ellipse cx="151" cy="130" rx="20" ry="18"/><ellipse cx="209" cy="130" rx="20" ry="18"/><circle class="robot-pupil robot-pupil-left" cx="151" cy="130" r="7"/><circle class="robot-pupil robot-pupil-right" cx="209" cy="130" r="7"/></g>
+            <path class="robot-mouth" d="M158 158q22 15 44 0"/>
+          </g>
+          <g class="robot-ear robot-ear-left"><rect x="76" y="112" width="18" height="42" rx="8"/></g><g class="robot-ear robot-ear-right"><rect x="266" y="112" width="18" height="42" rx="8"/></g>
+        </svg>
+        <div class="assistant-copy">
+          <p class="auth-kicker">Assistant Rodrick</p>
+          <p id="assistantMessage" class="assistant-message" aria-live="polite">Bienvenue. Créons un espace qui te ressemble.</p>
+          <p class="assistant-submessage">Quelques secondes suffisent pour démarrer.</p>
+        </div>
+      </section>
 
-    <p class="auth-switch">Déjà un compte ? <a href="login.html">Se connecter</a></p>
+      <section class="auth-panel" aria-labelledby="authFormTitle">
+        <p class="auth-kicker">Nouveau compte</p>
+        <h2>Rejoins le Hub.</h2>
+        <p id="authFormTitle" class="auth-lead">Crée ton compte pour suivre RodrickBOT et gérer ton profil.</p>
+
+        <form id="registerForm" class="auth-form" novalidate>
+          <div class="field">
+            <label class="sr-only" for="fName">Ton nom</label>
+            <span class="field-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="8" r="4.5"/></svg></span>
+            <input id="fName" type="text" placeholder="Ton nom" required autocomplete="name" minlength="2" />
+            <span class="field-state" aria-hidden="true"></span>
+          </div>
+          <div class="field">
+            <label class="sr-only" for="fEmail">Adresse email</label>
+            <span class="field-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 6.5 8 6 8-6"/></svg></span>
+            <input id="fEmail" type="email" placeholder="Adresse email" required autocomplete="email" inputmode="email" />
+            <span class="field-state" aria-hidden="true"></span>
+          </div>
+          <div class="field field-password">
+            <label class="sr-only" for="fPassword">Mot de passe</label>
+            <span class="field-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+            <input id="fPassword" type="password" placeholder="Mot de passe (8 caractères min.)" required minlength="8" autocomplete="new-password" aria-describedby="passwordStrength" />
+            <button type="button" id="togglePassword" class="field-toggle" aria-label="Afficher le mot de passe" aria-pressed="false"></button>
+            <span class="field-state" aria-hidden="true"></span>
+          </div>
+          <div id="passwordStrength" class="password-strength" aria-live="polite" aria-label="Robustesse du mot de passe">
+            <span class="strength-track" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span class="strength-label">Choisis au moins 8 caractères.</span>
+          </div>
+          <button type="submit"><span>Créer mon compte</span><span class="button-arrow" aria-hidden="true">→</span></button>
+          <div id="formError" class="form-error" role="alert" aria-live="assertive"></div>
+        </form>
+
+        <div class="auth-links">
+          <p>Déjà un compte ? <a href="login.html" data-auth-transition>Se connecter</a></p>
+        </div>
+      </section>
+    </main>
   </div>
 
+  <script src="js/auth-assistant.js"></script>
   <script src="js/register.js"></script>
   <script src="js/realtime.js"></script>
   <script src="js/nav.js"></script>

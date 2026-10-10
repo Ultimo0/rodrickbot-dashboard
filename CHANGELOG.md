@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.13
+
+### Interface comptes
+- **Connexion et inscription repensées :** les deux formulaires conservent le fond quadrillé, les cartes crème, les champs beiges, les boutons cuivrés et la navigation Rodrick Hub, dans une disposition plus lisible sur ordinateur et mobile.
+- **Assistant robot animé :** un robot SVG local flotte, cligne des yeux, regarde autour de lui, anime ses bras et adapte son expression aux champs, à l'adresse email, aux erreurs et à la réussite. Lorsqu'un mot de passe est affiché, il détourne volontairement le regard.
+- **Retours de formulaire :** validation visuelle des champs, messages d'erreur accessibles, état de soumission et messages contextuels de l'assistant. L'inscription affiche une jauge de robustesse du mot de passe.
+- **Passage fluide :** les liens Connexion/Inscription déclenchent une courte animation de sortie, avec prise en charge de `prefers-reduced-motion`.
+- **Tests :** ajout de contrôles automatisés pour la structure des deux formulaires, l'assistant, les transitions, les réactions au mot de passe et la robustesse.
+
 ## 0.9.12
 
 ### Accueil

@@ -19,6 +19,7 @@ function wirePasswordToggle(inputId, toggleId) {
     toggle.innerHTML = willShow ? EYE_OFF_ICON : EYE_ICON;
     toggle.setAttribute('aria-pressed', String(willShow));
     toggle.setAttribute('aria-label', willShow ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+    document.dispatchEvent(new CustomEvent('auth:password-visibility', { detail: { visible: willShow } }));
   });
 }
 
@@ -30,9 +31,15 @@ const errorEl = document.getElementById('formError');
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   errorEl.style.display = 'none';
+  errorEl.textContent = '';
 
   const email = document.getElementById('fEmail').value.trim();
   const password = document.getElementById('fPassword').value;
+
+  if (!form.checkValidity()) {
+    form.reportValidity();
+    return;
+  }
 
   try {
     const res = await fetch('/api/auth/login', {
@@ -46,12 +53,15 @@ form.addEventListener('submit', async (e) => {
     if (!res.ok) {
       errorEl.textContent = data.error || 'Une erreur est survenue.';
       errorEl.style.display = 'block';
+      window.authAssistant?.error(errorEl.textContent);
       return;
     }
 
+    window.authAssistant?.success();
     window.location.href = 'profile.html';
   } catch {
     errorEl.textContent = 'Impossible de contacter le serveur.';
     errorEl.style.display = 'block';
+    window.authAssistant?.error(errorEl.textContent);
   }
 });
